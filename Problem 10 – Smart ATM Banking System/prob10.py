@@ -90,14 +90,30 @@ def customer_login():
     #if not logged in 
     #else put a greeting message
 
-    account_number = st.text_input("Account Number: ")
-    pin = st.text_input("PIN: ", type = "password", max_chars = 4)
+    account_number = None
+    pin = None
+    login = None    
+    logout = None
     
-    #Submit button to check account number and PIN
+    if not st.session_state.logged_in:
+        account_number = st.text_input("Account Number: ")
+        pin = st.text_input("PIN: ", type = "password", max_chars = 4)
+        
+        #Login button to check account number and PIN
+        login = st.button('Login')
+    else:
+        #If logged in display a welcome message and logout button that 
+        #gets user back to login screen
+        accounts_dict = st.session_state.accounts_dict
+        
+        st.write(f"Welcome: {accounts_dict[st.session_state.account_used_idx]['Customer Name']}")
+        logout = st.button('Logout')
 
-    login = st.button('Login')
+        if logout:
+            st.session_state.logged_in = False
+            st.rerun()
           
-    #Check if submit button pressed    
+    #Check if  button pressed    
     if login:
         idx = 0 
         login_success = False
@@ -112,6 +128,7 @@ def customer_login():
                 st.session_state.logged_in = True
                 st.session_state.account_used_idx = idx
                 login_success = True
+                st.rerun()
                 break 
             
             idx += 1
