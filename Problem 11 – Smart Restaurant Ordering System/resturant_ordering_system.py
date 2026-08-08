@@ -22,7 +22,12 @@ if len(st.session_state.orders):
 else:
     st.info('There is no order yet')
     
-tab1, tab2, tab3, tab4 = st.tabs(['New Order', 'Menu', 'Bill', 'Daily Sales Report'])
+tab1, tab2, tab3, tab4 = st.tabs([
+    'New Order', 
+    'Menu', 
+    'Bill', 
+    'Daily Sales Report'
+])
 
 meals = {
     'Burger' : 180,
@@ -53,8 +58,11 @@ def display_sidebar():
 def buy_new_order():
     with st.form('New Order Form'):
         customer_name = st.text_input('Customer Name: ')
-        main_meal = st.selectbox("Main meal: ", meals.keys())
-        drink = st.selectbox('Drink: ', drinks.keys())
+        main_meal = st.selectbox(
+            "Main meal: ", 
+            meals.keys()
+            )
+        drink = st.selectbox('Drink: ',drinks.keys())
         dessert = st.selectbox('Dessert: ', ['No Dessert'] + list(desserts.keys()))
         place_order = st.form_submit_button('Place Order')
 
@@ -243,7 +251,13 @@ def daily_statistics_report():
     )
 
 def display_daily_statistics_report():
-    total_sales,count_orders,most_meal,most_drink,most_dessert,top_customer=daily_statistics_report()
+    
+    (total_sales,
+     count_orders,
+     most_meal,
+     most_drink,
+     most_dessert,
+     top_customer)=daily_statistics_report()
     
     st.header('Daily Statistics Report')
     
