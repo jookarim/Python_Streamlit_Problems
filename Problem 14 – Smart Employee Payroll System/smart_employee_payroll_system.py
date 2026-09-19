@@ -4,6 +4,8 @@ import time
 #Application title
 st.title("Smart employee payroll system", text_alignment='center')
 
+st.divider()
+
 #4 tabs for application sections 
 tab1, tab2, tab3, tab4 = st.tabs([
                                 "Payroll calculator",
