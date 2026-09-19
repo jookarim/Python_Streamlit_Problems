@@ -5,11 +5,12 @@ st.title('Smart Hotel Reservation System')
 
 BREAKFAST_PRICE = 250
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     'Make Reservation',
     'Available Rooms',
     'Cancel Reservation',
-    'Reservation Summary' 
+    'Reservation Summary',
+    'Hotel management dashboard'
 ])
 
 hotel_rooms = {
@@ -141,23 +142,20 @@ def display_available_rooms():
     with col3:
         st.write("**Available**")
         
-        
-    with col2:
-        for (
-            available_room_name,
-            available_room_quantity
-        ) in available_rooms.items():
-            
-                with col1:
-                    st.write(available_room_name)
-                with col2:
-                    st.write(hotel_rooms[available_room_name])
-                with col3:
-                    st.write(available_room_quantity)
+    for (
+        available_room_name,
+        available_room_quantity
+    ) in available_rooms.items():
+        with col1:
+            st.write(available_room_name)
+        with col2:
+            st.write(hotel_rooms[available_room_name])
+        with col3:
+            st.write(available_room_quantity)
         
 def cancel_reservation():
     guest_name = st.text_input("Guest Name: ")
-    available_rooms = get_available_rooms().keys()
+    available_rooms = list(get_available_rooms().keys())
     room_type = st.selectbox("Room Types", available_rooms)
     cancel_clicked = st.button("Cancel Reservation")
     canceled_reservation_idx = -1
@@ -165,21 +163,17 @@ def cancel_reservation():
     if cancel_clicked:
         for i in range(len(st.session_state.reservation_data)):
             if (
-                cancel_clicked and
                 guest_name == st.session_state.reservation_data[i]['Guest Name'] and 
                 room_type == st.session_state.reservation_data[i]['Room Type'] 
             ):
                 canceled_reservation_idx = i
                 break
 
-
         if canceled_reservation_idx != -1 and (
             start_available_rooms[room_type] > 
             st.session_state.available_rooms[room_type]):
             
-            st.session_state.reservation_data.remove(
-                st.session_state.reservation_data[canceled_reservation_idx]
-            )
+            st.session_state.reservation_data.pop(canceled_reservation_idx)
             
             st.session_state.success_msg = "Reservation Canceled Successfully"
             st.session_state.available_rooms[room_type] += 1
@@ -216,11 +210,10 @@ def display_reservation_summary():
         with col2:
             st.header('Cost Information')
             
-            st.write("Price per night:" 
+            st.write("Price per night: " 
                     f"{hotel_rooms[reservation_data['Room Type']]}")
             
-            room_cost = (hotel_rooms[reservation_data['Room Type']] * 
-                        reservation_data['Number of Nights'])
+            room_cost = (hotel_rooms[reservation_data['Room Type']] * reservation_data['Number of Nights'])
             
             st.write(f"Room Cost: {room_cost}")
             
@@ -251,6 +244,93 @@ def display_reservation_summary():
                     "Reservation Status: Confirmed\n"
                     "=====================================\n")
 
+def get_reservations_total_revenue():
+    reservation_data = st.session_state.reservation_data
+    
+    total_revenue = 0
+    
+    for reservation in reservation_data:
+        room_cost = (
+            hotel_rooms[reservation['Room Type']] * reservation['Number of Nights']
+        )
+        
+        breakfast_cost = (BREAKFAST_PRICE * reservation['Number of Nights'] 
+                        if reservation['Breakfast'] == 'Has Breakfast' 
+                        else 0)
+        
+        total_revenue += (room_cost + breakfast_cost)
+    
+    return total_revenue
+
+def get_most_reserved_room_type():
+    reservation_data = st.session_state.reservation_data
+
+    room_counts = {}
+
+    for reservation in reservation_data:
+        room_type = reservation['Room Type']
+
+        if room_type not in room_counts:
+            room_counts[room_type] = 1
+        else:
+            room_counts[room_type] += 1
+
+    most_reserved_room_name = None
+    most_reserved_room_count = 0
+
+    for room_type, count in room_counts.items():
+        if count > most_reserved_room_count:
+            most_reserved_room_name = room_type
+            most_reserved_room_count = count
+
+    return most_reserved_room_name
+
+def get_total_occupied_rooms():
+    total_occupied_rooms = 0
+    
+    for room_type in start_available_rooms:
+        total_occupied_rooms += (
+            start_available_rooms[room_type] - 
+            st.session_state.available_rooms[room_type]
+        )   
+
+    return total_occupied_rooms
+
+def get_total_available_rooms():
+    total_available_rooms = 0
+    
+    for room_type in st.session_state.available_rooms:
+        total_available_rooms += st.session_state.available_rooms[room_type]
+    
+    return total_available_rooms
+
+def get_avg_stay_duration():
+    reservation_data = st.session_state.reservation_data
+    
+    total_stay_duration = 0
+    
+    for reservation in reservation_data:
+        total_stay_duration += reservation['Number of Nights']
+
+    if len(reservation_data):
+        return total_stay_duration / len(reservation_data)
+    return 0
+
+def display_hotel_management_dashboard():
+    reservation_data = st.session_state.reservation_data
+    total_revenue = get_reservations_total_revenue()
+    most_reserved_room_name = get_most_reserved_room_type()
+    total_occupied_rooms = get_total_occupied_rooms()
+    total_available_rooms = get_total_available_rooms()
+    avg_stay_duration = get_avg_stay_duration()
+    
+    st.write(f"Total Reservations: {len(reservation_data)}")
+    st.write(f"Total Revenue: {total_revenue}")
+    st.write(f"Most Reserved room type: {most_reserved_room_name}")
+    st.write(f"Total occupied rooms: {total_occupied_rooms}")
+    st.write(f"Total available rooms: {total_available_rooms}")
+    st.write(f"Avg Stay duration: {avg_stay_duration}")
+    
 with tab1:
     make_reservation()
     
@@ -266,5 +346,8 @@ with tab3:
             
 with tab4:
     display_reservation_summary()
+    
+with tab5:
+    display_hotel_management_dashboard()
     
 display_sidebar()
