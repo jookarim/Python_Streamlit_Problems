@@ -1,12 +1,15 @@
 import streamlit as st
-import datetime 
+from datetime import date
 import time 
 
-tab1, tab2, tab3, tab4 = st.tabs([
+st.title('Clinic life management system', text_alignment='center')
+
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     'Book appointment',
     'View appointments',
     'Search appointment',
-    'View statistics'    
+    'Cancel appointments',
+    'Today schedule'    
 ])
 
 if 'appointments_data' not in st.session_state:
@@ -21,7 +24,7 @@ doctors = [
 def display_sidebar():
     with st.sidebar:
         st.write('**Clinic name: Clinic Life**')
-        st.write(f'**Today date: {datetime.date.today()}**')
+        st.write(f'**Today date: {date.today()}**')
         st.write(f'**Location: Street 1**')
         st.write(f'**Started since 2013**')
         
@@ -72,7 +75,7 @@ def book_appointment():
                 'Appointment date' : appointment_date,
                 'Appointment time' : appointment_time,
                 'Reason visit' : reason_visit,
-                'Status' : 'Schaduled'
+                'Status' : 'Scheduled'
             }
             
             st.session_state.appointments_data.append(appointment_record)
@@ -147,8 +150,70 @@ def search_patient():
         
         if search_button:
             search_result = search_patient_helper(patient_name, doctor_name, appointment_date)
-            st.table(search_result)
+            
+            if not search_result:
+                st.warning('No results')
+            else:
+                st.table(search_result)
+
+def cancel_appointment_helper(patient_name, doctor, appointment_date, appointment_time):
+    appointments_data = st.session_state.appointments_data
+    
+    for idx in range(len(appointments_data)):
+        if (appointments_data[idx]['Patient name'] == patient_name
+            and appointments_data[idx]['Doctor'] == doctor
+            and appointments_data[idx]['Appointment date'] == appointment_date
+            and appointments_data[idx]['Appointment time'] == appointment_time):
+                appointments_data[idx]['Status'] = 'Cancelled'
+            
+                return idx
+    
+    return -1 
         
+
+def cancel_appointment():
+    with st.form(key='Cancel form'):
+        patient_name = st.text_input('Patient name: ')
+        doctor = st.selectbox('Doctor: ', doctors)
+        appointment_date = st.date_input('Appointment date: ')
+        appointment_time = st.text_input('Appointment time: ')
+        cancel_appointment_button = st.form_submit_button('Cancel appointment')
+        
+    cancel_appointment_idx = None 
+    
+    if cancel_appointment_button:
+        cancel_appointment_idx = cancel_appointment_helper(patient_name, doctor, appointment_date, appointment_time)
+        
+        if cancel_appointment_idx == -1:
+            st.warning('No appointment with these data')
+        else:
+            st.session_state.appointments_data[cancel_appointment_idx]['Status'] = 'Cancelled'
+            
+            with st.spinner('Cancelling appointment'):
+                time.sleep(3)
+            
+            st.success('appointment cancelled successfully')
+            time.sleep(2)
+            st.rerun()
+        
+def display_today_schedule():
+    today_appoinments = []
+    appointments_data = st.session_state.appointments_data 
+    
+    for appointment in appointments_data:
+        today_date = date.today()
+        if (appointment['Appointment date'] == today_date 
+            and appointment['Status'] == 'Scheduled'):
+            today_appoinments.append(appointment)
+    
+    if not len(today_appoinments):
+        st.info('There are no appointments today')
+    else:
+        st.table(today_appoinments)
+
+def display_statistics():
+    pass 
+
 display_sidebar()
 
 with tab1:
@@ -159,3 +224,9 @@ with tab2:
     
 with tab3:
     search_patient()
+    
+with tab4:
+    cancel_appointment()
+    
+with tab5:
+    display_today_schedule()
