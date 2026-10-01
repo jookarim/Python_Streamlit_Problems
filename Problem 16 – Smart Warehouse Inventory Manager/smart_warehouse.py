@@ -12,6 +12,12 @@ class NoSearchResultException(Exception):
 class InvalidSearchException(Exception):
     pass 
 
+class InvalidDeleteID(Exception):
+    pass 
+
+class IDNotFoundForDeleteException(Exception):
+    pass 
+
 #Product class that stores product data
 class Product:
     def __init__(self, id, name, category, quantity, unit_price):
@@ -56,6 +62,10 @@ class ProductValidator:
         
         return True
 
+    @staticmethod 
+    def valid_id(product_id):
+        return product_id != ''
+     
 #Class to manage products 
 class ProductManager: 
     def __init__(self):
@@ -106,6 +116,22 @@ class ProductManager:
         #raise exception for not found product
         raise NoSearchResultException("No results with these search data")
         
+    def delete_product(self, id):
+        """Delete product using id"""
+        
+        #If product id is invalid then raise Invalid id exception
+        if not ProductValidator.valid_id(id):
+            raise InvalidDeleteID("ID is invalid for deletion")
+        
+        #Remove product with id if found
+        for product in st.session_state['products']:
+            if product.id == id:
+                st.session_state['products'].remove(product)
+                return 
+        
+        #If id not found raise id not found exception
+        raise IDNotFoundForDeleteException("ID not found to delete product with")
+        
         
 #Simple console test no UI yet (saperating logic from ui for cleaner code)
 product_manager = ProductManager()
@@ -126,4 +152,12 @@ try:
 except InvalidSearchException as e:
     print(str(e))
 except NoSearchResultException as e:
+    print(str(e))
+    
+#Try deleting product
+try:
+    product_manager.delete_product('1001')
+except InvalidDeleteID as e:
+    print(str(e))
+except IDNotFoundForDeleteException as e:
     print(str(e))
