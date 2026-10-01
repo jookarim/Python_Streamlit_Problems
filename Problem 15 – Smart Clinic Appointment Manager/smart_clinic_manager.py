@@ -166,7 +166,7 @@ def search_patient():
     col1, col2 = st.columns(2)
     
     selected = set()
-     
+
     with col1:
         st.subheader('Search categories')
         
@@ -387,7 +387,7 @@ def weekly_clinic_dashboard():
         
         if appointment_date.strftime("%A") not in day_count_appointment:
             day_count_appointment[appointment_date.strftime("%A")] = 0 
-         
+
         day_count_appointment[appointment_date.strftime("%A")] += 1   
             
     for appointment_date, appointments in date_to_appointment.items():
