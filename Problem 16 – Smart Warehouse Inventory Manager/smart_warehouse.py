@@ -4,6 +4,14 @@ import streamlit as st
 class InvalidProductException(Exception):
     pass 
 
+#Custom exception for handling no result from search
+class NoSearchResultException(Exception):
+    pass 
+
+#Custom exception for handling Invalid search data
+class InvalidSearchException(Exception):
+    pass 
+
 #Product class that stores product data
 class Product:
     def __init__(self, id, name, category, quantity, unit_price):
@@ -36,6 +44,17 @@ class ProductValidator:
             
         return True
 
+    @staticmethod 
+    def valid_search(product_id, 
+                    product_name, 
+                    product_category, 
+                    existing_products: list[Product]):
+        
+        """Checks if search data are valid not empty data"""
+        if not product_id or not product_category or not product_name:
+            return False 
+        
+        return True
 
 #Class to manage products 
 class ProductManager: 
@@ -70,8 +89,41 @@ class ProductManager:
             
         return products_list_dict
 
+    def search_product(self, id, name, category):
+        """Search for specific product using id, name, category"""
+        
+        #If search data are invalid raise exception for invalid search data
+        if not ProductValidator.valid_search(id, name, category, st.session_state['products']):
+            raise InvalidSearchException("Search data are invalid")
+        
+        #Search for product data and return it if found
+        for product in st.session_state['products']:
+            if (id == product.id
+                and name == product.name 
+                and category == product.category):
+                    return product 
+        
+        #raise exception for not found product
+        raise NoSearchResultException("No results with these search data")
+        
+        
 #Simple console test no UI yet (saperating logic from ui for cleaner code)
 product_manager = ProductManager()
-product_manager.add_product('1001', 'Hello', 'Clothes', 10, 60)
 
+#Try adding product
+try:
+    product_manager.add_product('1001', 'Hello', 'Clothes', 10, 60)
+except InvalidProductException as e:
+    print(str(e))
+
+#display products
 print(product_manager.get_products_list_dict())
+
+#Try searching for a product
+try:
+    product = product_manager.search_product('1001', 'v', 'Clothes')
+    print(product.unit_price)
+except InvalidSearchException as e:
+    print(str(e))
+except NoSearchResultException as e:
+    print(str(e))
