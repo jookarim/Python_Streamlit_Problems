@@ -173,6 +173,16 @@ class ProductManager:
         #If id not found raise id not found exception
         raise IDNotFoundForDeleteException("ID not found to delete product with")
 
+    def update_price(self, id, new_unit_price):
+        inventory = self.inventory 
+        
+        for product in inventory.products:
+            if product.id == id:
+                product.unit_price = new_unit_price
+                return 
+        
+        raise ProductNotFoundException("Product not found to update its price")
+    
 #Class to manage stock operations 
 #(restock or delete stock)
 #(1 storage location for now)
@@ -239,11 +249,15 @@ stock_manager = st.session_state["stock_manager"]
 #Try adding product
 try:
     product_manager.add_product('1001', 'Hello', 'Clothes', 60)
+    product_manager.update_price('1001', 25)
+    
 except InvalidProductException as e:
     print(str(e))
 except ProductAlreadyFoundException as e:
     print(str(e))
-
+except ProductNotFoundException as e:
+    print(str(e))
+    
 #display products
 print(product_manager.get_products_list_dict())
 
