@@ -15,7 +15,7 @@ class InvalidSearchException(Exception):
     pass 
 
 #Custom exception for handling invalid deleting id
-class InvalidDeleteID(Exception):
+class InvalidIDException(Exception):
     pass 
 
 #Custom exception for ID not found for deletion
@@ -36,6 +36,10 @@ class QuantityInsuffitientException(Exception):
 
 #Custom exception for product not found
 class ProductNotFoundException(Exception):
+    pass 
+
+#Custom exception for invalid price 
+class InvalidPriceException(Exception):
     pass 
 
 categories = [
@@ -92,6 +96,11 @@ class Validator:
     def valid_quantity(quantity):
         """Check if quantity valid"""
         return quantity > 0 
+    
+    @staticmethod 
+    def valid_price(price):
+        """Check if price is valid"""
+        return price > 0 
     
 class Inventory:
     def __init__(self):
@@ -161,7 +170,7 @@ class ProductManager:
         inventory = self.inventory
         #If product id is invalid then raise Invalid id exception
         if not Validator.valid_id(id):
-            raise InvalidDeleteID("ID is invalid for deletion")
+            raise InvalidIDException("ID is invalid for deletion")
         
         #Remove product with id if found
         for product in inventory.products:
@@ -176,6 +185,12 @@ class ProductManager:
         raise IDNotFoundForDeleteException("ID not found to delete product with")
 
     def update_price(self, id, new_unit_price):
+        if not Validator.valid_id(id):
+            raise InvalidIDException("Invalid ID cannot update price")
+        
+        if not Validator.valid_price(new_unit_price):
+            raise InvalidPriceException("Invalid price to update with")
+        
         inventory = self.inventory 
         
         for product in inventory.products:
@@ -295,18 +310,42 @@ class ProductManagerUI:
                     st.success('Product is added successfully')        
     
     def view_inventory_ui(self):
-        product_manager = self.product_manager 
-        products_dict = product_manager.get_products_list_dict()
-        st.table(products_dict)
-    
+        if len(self.product_manager.inventory.products) == 0:
+            st.warning('No products found in the warehouse')
+        else:
+            product_manager = self.product_manager 
+            products_dict = product_manager.get_products_list_dict()
+            st.table(products_dict)
+
+    def delete_product_ui(self):
+            product_manager = self.product_manager 
+            product_id = st.text_input("Product ID: ")
+            
+            delete_product_button = st.button("Delete product")
+            
+            if delete_product_button:
+                try:
+                    product_manager.delete_product(product_id)
+                except IDNotFoundForDeleteException as e:
+                    st.error(str(e))
+                except QuantityNotZeroException as e:
+                    st.warning(str(e))
+                except InvalidIDException as e:
+                    st.error(str(e))
+                else:
+                    st.success('Product is deleted successfully')
+                
     def display(self):
-        tab_add, tab_view = st.tabs(['Add product', 'View products'])
+        tab_add, tab_view, tab_delete = st.tabs(['Add product', 'View products', 'Delete product'])
         
         with tab_add:
             self.add_product_ui()
         
         with tab_view:
             self.view_inventory_ui()
+        
+        with tab_delete:
+            self.delete_product_ui()
             
 if "inventory" not in st.session_state:
     st.session_state["inventory"] = Inventory()
