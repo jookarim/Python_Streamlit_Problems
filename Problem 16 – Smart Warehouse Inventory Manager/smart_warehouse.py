@@ -1,5 +1,7 @@
 import streamlit as st 
 
+WAREHOUSE_NAME = "Best warehouse"
+
 #Custom exception for handling invalid products
 class InvalidProductException(Exception):
     pass 
@@ -36,6 +38,11 @@ class QuantityInsuffitientException(Exception):
 class ProductNotFoundException(Exception):
     pass 
 
+categories = [
+    'Electronics',
+    'Clothes'
+]
+
 #Product class that stores product data
 class Product:
     def __init__(self, id, name, category, quantity, unit_price):
@@ -50,14 +57,9 @@ class Validator:
     @staticmethod
     def valid_insertion(new_product: Product, 
                         existing_products: list[Product]):
-        """Checks if id conflicts 
-        then check is id or name or category are empty 
-        or quantity less than or equal to 0 
-        or price less than or equal to 0"""
-        
-        for p in existing_products:
-            if p.id == new_product.id:
-                return False 
+        """Checks if the ID, name, or category are empty,
+        or if the quantity is less than 0,
+        or if the price is less than or equal to 0."""
         
         if (not new_product.id or 
             not new_product.name or 
@@ -109,13 +111,13 @@ class ProductManager:
         
         product = Product(id, name, category, 0, unit_price)
         
+        if not Validator.valid_insertion(product, inventory.products):
+            raise InvalidProductException("Product is invalid, cannot add it")
+                
         for i in range(len(self.inventory.products)):
             if self.inventory.products[i].id == id:
                 raise ProductAlreadyFoundException("Product already found")
             
-        if not Validator.valid_insertion(product, inventory.products):
-            raise InvalidProductException("Product is invalid, cannot add it")
-       
         inventory.products.append(product)
             
     def get_products_list_dict(self):  
@@ -231,60 +233,101 @@ class StockManager:
                 return product.quantity 
         
         raise ProductNotFoundException("Product not found to get its quantity")
-    
-inventory = Inventory()
 
-# Store the ProductManager object in Streamlit session state
-if "product_manager" not in st.session_state:
-    st.session_state["product_manager"] = ProductManager(inventory)
+class InventoryStatistics:
+    @staticmethod
+    def get_count_products(inventory):
+        return len(inventory.products)
 
-if "stock_manager" not in st.session_state: 
-    st.session_state["stock_manager"] = StockManager(inventory)
+    @staticmethod
+    def get_total_quantity(inventory):
+        total_quantity = 0 
+        
+        for product in inventory.products:
+            total_quantity += product.quantity 
+        
+        return total_quantity 
     
-product_manager = st.session_state["product_manager"]
-stock_manager = st.session_state["stock_manager"]
+    @staticmethod 
+    def get_total_value(inventory):
+        total_value = 0 
+        
+        for product in inventory.products:
+            total_value += (product.unit_price * product.quantity) 
+        
+        return total_value 
+    
+def display_sidebar(count_products: int, total_quantity: int, total_value: int) -> None:
+    with st.sidebar:
+        st.write(f'Ware house name: {WAREHOUSE_NAME}')
+        st.write(f'Total number of products: {count_products}')
+        st.write(f'Total quantity in stock: {total_quantity}')
+        st.write(f'Total inventory value: {total_value}')
+
+class ProductManagerUI:
+    def __init__(self, product_manager):
+        self.product_manager = product_manager 
+    
+    def add_product_ui(self):
+        product_manager = self.product_manager 
+        
+        with st.form(key='Add product form'):
+            product_id = st.text_input('Product ID: ')
+            product_name = st.text_input('Product name: ')
+            category = st.selectbox('Category: ', categories)
+            unit_price = st.number_input('Unit price: ')
+            add_product = st.form_submit_button('Add Product')
+            
+            if add_product:
+                try:
+                    self.product_manager.add_product(
+                        id=product_id.strip(),
+                        name=product_name.strip(),
+                        category=category,
+                        unit_price=unit_price
+                    )
+                    
+                except InvalidProductException as e:
+                    st.error(str(e))
+                except ProductAlreadyFoundException as e:
+                    st.warning(str(e))
+                else:
+                    st.success('Product is added successfully')        
+    
+    def view_inventory_ui(self):
+        product_manager = self.product_manager 
+        products_dict = product_manager.get_products_list_dict()
+        st.table(products_dict)
+    
+    def display(self):
+        tab_add, tab_view = st.tabs(['Add product', 'View products'])
+        
+        with tab_add:
+            self.add_product_ui()
+        
+        with tab_view:
+            self.view_inventory_ui()
+            
+if "inventory" not in st.session_state:
+    st.session_state["inventory"] = Inventory()
+
+inventory = st.session_state["inventory"]
+product_manager = ProductManager(inventory)
+stock_manager = StockManager(inventory)
 
 #Simple console test no UI yet (saperating logic from ui for cleaner code)
 
+product_manager_ui = ProductManagerUI(product_manager)
 #Try adding product
-try:
-    product_manager.add_product('1001', 'Hello', 'Clothes', 60)
-    product_manager.update_price('1001', 25)
-    
-except InvalidProductException as e:
-    print(str(e))
-except ProductAlreadyFoundException as e:
-    print(str(e))
-except ProductNotFoundException as e:
-    print(str(e))
-    
+
+product_manager_ui.display()
+
 #display products
 print(product_manager.get_products_list_dict())
 
-#Try searching for a product
-try:
-    product = product_manager.search_product('1001', 'Hello', 'Clothes')
-    print(product.unit_price)
-except InvalidSearchException as e:
-    print(str(e))
-except NoSearchResultException as e:
-    print(str(e))
-    
-try:
-    stock_manager.restock_product("1001", 20)
-    stock_manager.remove_stock("1001", 5)
-    print(stock_manager.get_quantity("1001"))
-except QuantityInsuffitientException as e:
-    print(str(e))
-except ProductNotFoundException as e:
-    print(str(e))
-    
-#Try deleting product
-try:
-    product_manager.delete_product('1001')
-except InvalidDeleteID as e:
-    print(str(e))
-except IDNotFoundForDeleteException as e:
-    print(str(e))
-except QuantityNotZeroException as e:
-    print(str(e))
+count_products = InventoryStatistics.get_count_products(inventory)
+total_quantity = InventoryStatistics.get_total_quantity(inventory)
+total_inventory = InventoryStatistics.get_total_value(inventory)
+
+display_sidebar(count_products, total_quantity, total_inventory)
+
