@@ -212,6 +212,9 @@ class StockManager:
         if not Validator.valid_quantity(quantity):
             raise QuantityInsuffitientException("Product insuffitient for restock")
         
+        if not Validator.valid_id(id):
+            raise InvalidIDException("ID is invalid for restock")
+        
         inventory = self.inventory 
         
         for product in inventory.products:
@@ -226,6 +229,9 @@ class StockManager:
         if not Validator.valid_quantity(quantity):
             raise QuantityInsuffitientException("Product insuffitient for remove stock")
         
+        if not Validator.valid_id(id):
+            raise InvalidIDException("ID is invalid for restock")
+        
         #Get product quantity
         curr_quantity = self.get_quantity(id)
         
@@ -239,6 +245,8 @@ class StockManager:
                 product.quantity -= quantity 
                 return 
         
+        raise ProductNotFoundException("Product not found to remove stock")
+    
     def get_quantity(self, id):
         """Get quantity of a specific product using id"""
         inventory = self.inventory
@@ -318,34 +326,122 @@ class ProductManagerUI:
             st.table(products_dict)
 
     def delete_product_ui(self):
-            product_manager = self.product_manager 
+        product_manager = self.product_manager
+
+        with st.form("Delete product form"):
             product_id = st.text_input("Product ID: ")
-            
-            delete_product_button = st.button("Delete product")
-            
+
+            delete_product_button = st.form_submit_button("Delete product")
+
             if delete_product_button:
                 try:
                     product_manager.delete_product(product_id)
+
                 except IDNotFoundForDeleteException as e:
                     st.error(str(e))
+
                 except QuantityNotZeroException as e:
                     st.warning(str(e))
+
+                except InvalidIDException as e:
+                    st.error(str(e))
+
+                else:
+                    st.success("Product is deleted successfully")
+        
+    def update_price_ui(self):
+        with st.form(key='Update price'):
+            product_id = st.text_input('Product ID: ')
+            unit_price = st.number_input('Product price: ')
+            
+            update_price_submit = st.form_submit_button('Update price')
+        
+        if update_price_submit:
+            try:
+                self.product_manager.update_price(product_id, unit_price)
+            except ProductNotFoundException as e:
+                st.error(str(e))
+            except InvalidIDException as e:
+                st.error(str(e))
+            except InvalidPriceException as e:
+                st.error(str(e))
+            else:
+                st.success('Product price is updated successfully')
+                
+class StockManagerUI:
+    def __init__(self, stock_manager: StockManager):
+        self.stock_manager = stock_manager 
+    
+    def restock_product_ui(self):
+        with st.form('Restock product'):
+            product_id = st.text_input('ID: ')
+            product_quantity = st.number_input('Quantity: ')
+            
+            restock_product_button = st.form_submit_button('Restock product')
+            
+        if restock_product_button:   
+            try: 
+                self.stock_manager.restock_product(product_id, product_quantity)
+            except ProductNotFoundException as e:
+                st.warning(str(e))
+            except QuantityInsuffitientException as e:
+                st.error(str(e))
+            except InvalidIDException as e:
+                st.error(str(e))
+            else:
+                st.success(f'Product: {product_id} restocked successfully')
+                
+    def remove_stock_ui(self):
+        with st.form('Remove stock'):
+            product_id = st.text_input("Product ID: ")
+            product_quantity = st.number_input("Product Quantity: ")
+            
+            remove_stock = st.form_submit_button("Remove stock")
+            
+            if remove_stock:
+                try:
+                    self.stock_manager.remove_stock(product_id, product_quantity)
+                except ProductNotFoundException as e:
+                    st.error(str(e))
+                except QuantityInsuffitientException as e:
+                    st.error(str(e))
                 except InvalidIDException as e:
                     st.error(str(e))
                 else:
-                    st.success('Product is deleted successfully')
-                
+                    st.success(f'Product {product_id} removed successfully')
+        
+class InventoryUI:
+    def __init__(self, product_manager_ui, stock_manager_ui):
+        self.product_manager_ui = product_manager_ui 
+        self.stock_manager_ui = stock_manager_ui 
+    
     def display(self):
-        tab_add, tab_view, tab_delete = st.tabs(['Add product', 'View products', 'Delete product'])
+        tabs = st.tabs([
+            'Add product',
+            'Remove product',
+            'View products',
+            'Update product price',
+            'Restock product',
+            'Remove stock'
+        ])
         
-        with tab_add:
-            self.add_product_ui()
+        with tabs[0]:
+            self.product_manager_ui.add_product_ui()
+            
+        with tabs[1]:
+            self.product_manager_ui.delete_product_ui()
+            
+        with tabs[2]:
+            self.product_manager_ui.view_inventory_ui()
         
-        with tab_view:
-            self.view_inventory_ui()
+        with tabs[3]:
+            self.product_manager_ui.update_price_ui()
+            
+        with tabs[4]:
+            self.stock_manager_ui.restock_product_ui()
         
-        with tab_delete:
-            self.delete_product_ui()
+        with tabs[5]:
+            self.stock_manager_ui.remove_stock_ui()
             
 if "inventory" not in st.session_state:
     st.session_state["inventory"] = Inventory()
@@ -357,12 +453,11 @@ stock_manager = StockManager(inventory)
 #Simple console test no UI yet (saperating logic from ui for cleaner code)
 
 product_manager_ui = ProductManagerUI(product_manager)
+stock_manager_ui = StockManagerUI(stock_manager)
+inventory_ui = InventoryUI(product_manager_ui, stock_manager_ui)
+
 #Try adding product
-
-product_manager_ui.display()
-
-#display products
-print(product_manager.get_products_list_dict())
+inventory_ui.display()
 
 count_products = InventoryStatistics.get_count_products(inventory)
 total_quantity = InventoryStatistics.get_total_quantity(inventory)
