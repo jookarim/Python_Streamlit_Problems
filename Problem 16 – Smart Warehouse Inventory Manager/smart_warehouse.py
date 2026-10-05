@@ -1,6 +1,8 @@
 import streamlit as st 
+import time 
 
 WAREHOUSE_NAME = "Best warehouse"
+SUCCESS_TIMER = 0.5
 
 #Custom exception for handling invalid products
 class InvalidProductException(Exception):
@@ -31,7 +33,7 @@ class ProductAlreadyFoundException(Exception):
     pass 
 
 #Custom exception for insuffient quantity
-class QuantityInsuffitientException(Exception):
+class QuantityInsufficientException(Exception):
     pass 
 
 #Custom exception for product not found
@@ -40,6 +42,9 @@ class ProductNotFoundException(Exception):
 
 #Custom exception for invalid price 
 class InvalidPriceException(Exception):
+    pass 
+
+class HighQuantityException(Exception):
     pass 
 
 categories = [
@@ -56,11 +61,14 @@ class Product:
         self.quantity = quantity 
         self.unit_price = unit_price 
         
+class Inventory:
+    def __init__(self):
+        self.products = []
+        
 #Class that validates insertion
 class Validator:
     @staticmethod
-    def valid_insertion(new_product: Product, 
-                        existing_products: list[Product]):
+    def valid_product(new_product: Product) -> bool:
         """Checks if the ID, name, or category are empty,
         or if the quantity is less than 0,
         or if the price is less than or equal to 0."""
@@ -79,7 +87,7 @@ class Validator:
     def valid_search(product_id, 
                     product_name, 
                     product_category, 
-                    ):
+                    ) -> bool:
         
         """Checks if search data are valid not empty data"""
         if not product_id or not product_category or not product_name:
@@ -88,24 +96,32 @@ class Validator:
         return True
 
     @staticmethod
-    def valid_id(product_id):
+    def valid_id(product_id) -> bool:
         """Check if id is valid"""
         return product_id != ''
     
     @staticmethod
-    def valid_quantity(quantity):
+    def valid_quantity(quantity) -> bool:
         """Check if quantity valid"""
         return quantity > 0 
     
     @staticmethod 
-    def valid_price(price):
+    def valid_price(price) -> bool:
         """Check if price is valid"""
         return price > 0 
     
-class Inventory:
-    def __init__(self):
-        self.products = []
+    @staticmethod
+    def product_found(inventory: Inventory, checked_product: Product) -> bool:
+        for product in inventory.products:
+            if product.id == checked_product.id:
+                return True 
+        
+        return False         
 
+def rerun_success():
+    time.sleep(SUCCESS_TIMER)
+    st.rerun()
+    
 #Class to manage products 
 class ProductManager: 
     def __init__(self, inventory):
@@ -120,12 +136,11 @@ class ProductManager:
         
         product = Product(id, name, category, 0, unit_price)
         
-        if not Validator.valid_insertion(product, inventory.products):
+        if not Validator.valid_product(product):
             raise InvalidProductException("Product is invalid, cannot add it")
                 
-        for i in range(len(self.inventory.products)):
-            if self.inventory.products[i].id == id:
-                raise ProductAlreadyFoundException("Product already found")
+        if Validator.product_found(inventory, product):
+            raise ProductAlreadyFoundException("Product already found")
             
         inventory.products.append(product)
             
@@ -146,6 +161,16 @@ class ProductManager:
             
         return products_list_dict
 
+    def get_products_ids(self):
+        products = self.inventory.products
+        
+        ids = []
+        
+        for product in products:
+            ids.append(product.id) 
+        
+        return ids    
+    
     def search_product(self, id, name, category):
         """Search for specific product using id, name, category"""
         
@@ -209,11 +234,12 @@ class StockManager:
     
     def restock_product(self, id, quantity):
         """Class to restock (add quantity to already added products)"""
-        if not Validator.valid_quantity(quantity):
-            raise QuantityInsuffitientException("Product insuffitient for restock")
         
         if not Validator.valid_id(id):
             raise InvalidIDException("ID is invalid for restock")
+                
+        elif not Validator.valid_quantity(quantity):
+            raise QuantityInsufficientException("Product insuffitient for restock")
         
         inventory = self.inventory 
         
@@ -224,20 +250,31 @@ class StockManager:
         
         raise ProductNotFoundException("Product not found to restock")
     
+    def get_products_ids(self):
+        products = self.inventory.products
+        
+        ids = []
+        
+        for product in products:
+            ids.append(product.id) 
+        
+        return ids    
+        
     def remove_stock(self, id, quantity):
         """Class to remove stock (Take quantity from already added product)"""
-        if not Validator.valid_quantity(quantity):
-            raise QuantityInsuffitientException("Product insuffitient for remove stock")
         
         if not Validator.valid_id(id):
             raise InvalidIDException("ID is invalid for restock")
+                
+        elif not Validator.valid_quantity(quantity):
+            raise QuantityInsufficientException("Product insuffitient for remove stock")
         
         #Get product quantity
         curr_quantity = self.get_quantity(id)
         
         #Raise exception of quantity needed to restock > curr quantity
         if curr_quantity < quantity:
-            raise QuantityInsuffitientException("Quantity insuffitient to remove")
+            raise HighQuantityException("Removed quantity is higher than current product quantity")
         
         #restock of all data are correct
         for product in self.inventory.products:
@@ -279,13 +316,6 @@ class InventoryStatistics:
             total_value += (product.unit_price * product.quantity) 
         
         return total_value 
-    
-def display_sidebar(count_products: int, total_quantity: int, total_value: int) -> None:
-    with st.sidebar:
-        st.write(f'Ware house name: {WAREHOUSE_NAME}')
-        st.write(f'Total number of products: {count_products}')
-        st.write(f'Total quantity in stock: {total_quantity}')
-        st.write(f'Total inventory value: {total_value}')
 
 class ProductManagerUI:
     def __init__(self, product_manager):
@@ -295,7 +325,7 @@ class ProductManagerUI:
         product_manager = self.product_manager 
         
         with st.form(key='Add product form'):
-            product_id = st.text_input('Product ID: ')
+            product_id = st.text_input('Product ID: ').strip()
             product_name = st.text_input('Product name: ')
             category = st.selectbox('Category: ', categories)
             unit_price = st.number_input('Unit price: ')
@@ -316,7 +346,8 @@ class ProductManagerUI:
                     st.warning(str(e))
                 else:
                     st.success('Product is added successfully')        
-    
+                    rerun_success()
+                    
     def view_inventory_ui(self):
         if len(self.product_manager.inventory.products) == 0:
             st.warning('No products found in the warehouse')
@@ -329,7 +360,7 @@ class ProductManagerUI:
         product_manager = self.product_manager
 
         with st.form("Delete product form"):
-            product_id = st.text_input("Product ID: ")
+            product_id = st.selectbox("Product ID: ", product_manager.get_products_ids())
 
             delete_product_button = st.form_submit_button("Delete product")
 
@@ -348,10 +379,11 @@ class ProductManagerUI:
 
                 else:
                     st.success("Product is deleted successfully")
-        
+                    rerun_success()
+                    
     def update_price_ui(self):
         with st.form(key='Update price'):
-            product_id = st.text_input('Product ID: ')
+            product_id = st.selectbox('Product ID: ', product_manager.get_products_ids())
             unit_price = st.number_input('Product price: ')
             
             update_price_submit = st.form_submit_button('Update price')
@@ -367,6 +399,7 @@ class ProductManagerUI:
                 st.error(str(e))
             else:
                 st.success('Product price is updated successfully')
+                rerun_success()
                 
 class StockManagerUI:
     def __init__(self, stock_manager: StockManager):
@@ -374,7 +407,8 @@ class StockManagerUI:
     
     def restock_product_ui(self):
         with st.form('Restock product'):
-            product_id = st.text_input('ID: ')
+            product_id = st.selectbox('Product ID: ', self.stock_manager.get_products_ids())
+            
             product_quantity = st.number_input('Quantity: ')
             
             restock_product_button = st.form_submit_button('Restock product')
@@ -383,17 +417,19 @@ class StockManagerUI:
             try: 
                 self.stock_manager.restock_product(product_id, product_quantity)
             except ProductNotFoundException as e:
-                st.warning(str(e))
-            except QuantityInsuffitientException as e:
+                st.error(str(e))
+            except QuantityInsufficientException as e:
                 st.error(str(e))
             except InvalidIDException as e:
                 st.error(str(e))
             else:
                 st.success(f'Product: {product_id} restocked successfully')
-                
+                rerun_success()
+                                    
     def remove_stock_ui(self):
         with st.form('Remove stock'):
-            product_id = st.text_input("Product ID: ")
+            product_id = st.selectbox("Product ID: ", self.stock_manager.get_products_ids())
+            
             product_quantity = st.number_input("Product Quantity: ")
             
             remove_stock = st.form_submit_button("Remove stock")
@@ -403,13 +439,16 @@ class StockManagerUI:
                     self.stock_manager.remove_stock(product_id, product_quantity)
                 except ProductNotFoundException as e:
                     st.error(str(e))
-                except QuantityInsuffitientException as e:
+                except QuantityInsufficientException as e:
                     st.error(str(e))
                 except InvalidIDException as e:
                     st.error(str(e))
+                except HighQuantityException as e:
+                    st.warning(str(e))
                 else:
                     st.success(f'Product {product_id} removed successfully')
-        
+                    rerun_success()
+                    
 class InventoryUI:
     def __init__(self, product_manager_ui, stock_manager_ui):
         self.product_manager_ui = product_manager_ui 
@@ -442,6 +481,18 @@ class InventoryUI:
         
         with tabs[5]:
             self.stock_manager_ui.remove_stock_ui()
+    
+    @staticmethod
+    def display_sidebar(inventory) -> None:
+        count_products = InventoryStatistics.get_count_products(inventory)
+        total_quantity = InventoryStatistics.get_total_quantity(inventory)
+        total_value = InventoryStatistics.get_total_value(inventory)
+        
+        with st.sidebar:
+            st.write(f'Ware house name: {WAREHOUSE_NAME}')
+            st.write(f'Total number of products: {count_products}')
+            st.write(f'Total quantity in stock: {total_quantity}')
+            st.write(f'Total inventory value: {total_value}')
             
 if "inventory" not in st.session_state:
     st.session_state["inventory"] = Inventory()
@@ -463,5 +514,4 @@ count_products = InventoryStatistics.get_count_products(inventory)
 total_quantity = InventoryStatistics.get_total_quantity(inventory)
 total_inventory = InventoryStatistics.get_total_value(inventory)
 
-display_sidebar(count_products, total_quantity, total_inventory)
-
+InventoryUI.display_sidebar(inventory)
