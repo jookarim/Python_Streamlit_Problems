@@ -90,6 +90,16 @@ class ProductRepository:
         
         return False   
     
+    def get_all_products(self):
+        return self.products
+    
+    def get_product_by_id(self, id) -> Product | None:
+        for product in self.products:
+            if product.id == id:
+                return product
+
+        return None
+    
 #Class that validates insertion
 class Validator:
     @staticmethod
@@ -165,7 +175,7 @@ class ProductManager:
     def get_products_list_dict(self) -> list[dict]:
         products_list_dict = []
         
-        for product in self.product_repository.products:
+        for product in self.product_repository.get_all_products():
             products_list_dict.append({
                 'ID' : product.id,
                 'Name' : product.name,
@@ -185,34 +195,30 @@ class ProductManager:
             raise InvalidSearchException("Search data are invalid")
         
         #Search for product data and return it if found
-        for product in product_repository.products:
-            if (id == product.id
-                and name == product.name 
-                and category == product.category):
-                    return product 
-        
-        #raise exception for not found product
-        raise NoSearchResultException("No results with these search data")
+        product = self.product_repository.search_product(
+            id,
+            name,
+            category
+        )
+
+        if product is None:
+            raise NoSearchResultException("No results with these search data")
+
+        return product
         
     def delete_product(self, id):
-        """Delete product using id"""
-        
-        product_repository = self.product_repository
-        #If product id is invalid then raise Invalid id exception
         if not Validator.valid_id(id):
             raise InvalidIDException("ID is invalid for deletion")
-        
-        #Remove product with id if found
-        for product in product_repository.products:
-            if product.id == id:
-                if product.quantity == 0:
-                    product_repository.remove_product(product)
-                    return 
-                else:
-                    raise QuantityNotZeroException("Cannot delete product with quantity not equal 0")
-        
-        #If id not found raise id not found exception
-        raise ProductNotFoundException("ID not found to delete product with")
+
+        product = self.product_repository.get_product_by_id(id)
+
+        if product is None:
+            raise ProductNotFoundException("ID not found to delete product with")
+
+        if product.quantity != 0:
+            raise QuantityNotZeroException("Cannot delete product with quantity not equal 0")
+
+        self.product_repository.remove_product(product)
     
     def update_price(self, id, new_unit_price):
         if not Validator.valid_id(id):
@@ -221,14 +227,12 @@ class ProductManager:
         if not Validator.valid_price(new_unit_price):
             raise InvalidPriceException("Invalid price to update with")
         
-        product_repository = self.product_repository 
+        product = self.product_repository.get_product_by_id(id)
         
-        for product in product_repository.products:
-            if product.id == id:
-                product.unit_price = new_unit_price
-                return 
+        if product is None:
+            raise ProductNotFoundException("Product not found to update its price")
         
-        raise ProductNotFoundException("Product not found to update its price")
+        product.unit_price = new_unit_price
     
 #Class to manage stock operations 
 #(restock or delete stock)
@@ -246,14 +250,12 @@ class StockManager:
         elif not Validator.valid_quantity(quantity):
             raise InvalidQuantityException("Quantity is invalid for restock")
         
-        product_repository = self.product_repository 
-        
-        for product in product_repository.products:
-            if product.id == id:
-                product.quantity += quantity 
-                return 
-        
-        raise ProductNotFoundException("Product not found to restock")
+        product = self.product_repository.get_product_by_id(id)
+
+        if product is None:
+            raise ProductNotFoundException("Product not found to restock")
+
+        product.quantity += quantity
         
     def remove_stock(self, id, quantity):
         """Class to remove stock (Take quantity from already added product)"""
@@ -272,12 +274,12 @@ class StockManager:
             raise HighQuantityException("Removed quantity is higher than current product quantity")
         
         #restock of all data are correct
-        for product in self.product_repository.products:
-            if product.id == id:
-                product.quantity -= quantity 
-                return 
+        product = self.product_repository.get_product_by_id(id)
         
-        raise ProductNotFoundException("Product not found to remove stock")
+        if product is None:
+            raise ProductNotFoundException("Product not found to remove stock")
+
+        product.quantity -= quantity
     
     def low_stock_report(self, threshold) -> list[dict]:
         if threshold < 0:
@@ -285,7 +287,7 @@ class StockManager:
         
         low_stock = []
         
-        for product in self.product_repository.products:
+        for product in self.product_repository.get_all_products():
             if product.quantity < threshold:
                 low_stock.append({
                     'Name: ' : product.name,
@@ -296,25 +298,24 @@ class StockManager:
     
     def get_quantity(self, id):
         """Get quantity of a specific product using id"""
-        product_repository = self.product_repository
-        
-        for product in product_repository.products:
-            if product.id == id:
-                return product.quantity 
-        
-        raise ProductNotFoundException("Product not found to get its quantity")
+        product = self.product_repository.get_product_by_id(id)
+
+        if product is None:
+            raise ProductNotFoundException("Product not found to get its quantity")
+
+        return product.quantity
 
 
 class InventoryStatistics:
     @staticmethod
     def get_count_products(product_repository):
-        return len(product_repository.products)
+        return len(product_repository.get_all_products())
 
     @staticmethod
     def get_total_quantity(product_repository):
         total_quantity = 0 
         
-        for product in product_repository.products:
+        for product in product_repository.get_all_products():
             total_quantity += product.quantity 
         
         return total_quantity 
@@ -323,7 +324,7 @@ class InventoryStatistics:
     def get_total_value(product_repository):
         total_value = 0 
         
-        for product in product_repository.products:
+        for product in product_repository.get_all_products():
             total_value += (product.unit_price * product.quantity) 
         
         return total_value 
@@ -360,7 +361,7 @@ class ProductManagerUI:
                     rerun_success()
                     
     def view_product_repository_ui(self):
-        if len(self.product_manager.product_repository.products) == 0:
+        if len(self.product_manager.product_repository.get_all_products()) == 0:
             st.warning('No products found in the warehouse')
         else:
             product_manager = self.product_manager 
@@ -544,10 +545,10 @@ stock_manager = StockManager(product_repository)
 
 product_manager_ui = ProductManagerUI(product_manager)
 stock_manager_ui = StockManagerUI(stock_manager)
-product_repository_ui = InventoryUI(product_manager_ui, stock_manager_ui)
+inventory_ui = InventoryUI(product_manager_ui, stock_manager_ui)
 
 #Try adding product
-product_repository_ui.display()
+inventory_ui.display()
 
 count_products = InventoryStatistics.get_count_products(product_repository)
 total_quantity = InventoryStatistics.get_total_quantity(product_repository)
