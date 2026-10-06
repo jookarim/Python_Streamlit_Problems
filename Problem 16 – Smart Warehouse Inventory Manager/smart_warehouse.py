@@ -61,10 +61,33 @@ class Product:
         self.quantity = quantity 
         self.unit_price = unit_price 
         
-class Inventory:
+class ProductRepository:
     def __init__(self):
         self.products = []
+    
+    def add_product(self, product: Product) -> None:
+        self.products.append(product)
+    
+    def remove_product(self, product: Product) -> None:
+        self.products.remove(product)
+    
+    def get_products_ids(self) -> list[int]:
+        products_ids = []
         
+        for product in self.products:
+            products_ids.append(product.id)
+        
+        return products_ids 
+    
+    def search_product(self, product_id, product_name, product_category) -> Product | None:
+        for product in self.products:
+            if (product_id == product.id
+                and product_name == product.name 
+                and product_category == product.category):
+                    return product 
+        
+        return None 
+            
 #Class that validates insertion
 class Validator:
     @staticmethod
@@ -111,7 +134,7 @@ class Validator:
         return price > 0 
     
     @staticmethod
-    def product_found(inventory: Inventory, checked_product: Product) -> bool:
+    def product_found(inventory: ProductRepository, checked_product: Product) -> bool:
         for product in inventory.products:
             if product.id == checked_product.id:
                 return True 
@@ -142,35 +165,22 @@ class ProductManager:
         if Validator.product_found(inventory, product):
             raise ProductAlreadyFoundException("Product already found")
             
-        inventory.products.append(product)
-            
-    def get_products_list_dict(self):  
-        """return data as list of dict to be used when displaying table"""
+        inventory.add_product(product)
+    
+    def get_products_list_dict(self) -> list[dict]:
         products_list_dict = []
         
-        inventory = self.inventory 
-        
-        for product in inventory.products:
+        for product in self.inventory.products:
             products_list_dict.append({
                 'ID' : product.id,
                 'Name' : product.name,
                 'Category' : product.category,
                 'Quantity' : product.quantity,
                 'Unit price' : product.unit_price
-            })
-            
-        return products_list_dict
+            })    
 
-    def get_products_ids(self):
-        products = self.inventory.products
+        return products_list_dict 
         
-        ids = []
-        
-        for product in products:
-            ids.append(product.id) 
-        
-        return ids    
-    
     def search_product(self, id, name, category):
         """Search for specific product using id, name, category"""
         
@@ -201,7 +211,7 @@ class ProductManager:
         for product in inventory.products:
             if product.id == id:
                 if product.quantity == 0:
-                    inventory.products.remove(product)
+                    inventory.remove_product(product)
                     return 
                 else:
                     raise QuantityNotZeroException("Cannot delete product with quantity not equal 0")
@@ -249,16 +259,6 @@ class StockManager:
                 return 
         
         raise ProductNotFoundException("Product not found to restock")
-    
-    def get_products_ids(self):
-        products = self.inventory.products
-        
-        ids = []
-        
-        for product in products:
-            ids.append(product.id) 
-        
-        return ids    
         
     def remove_stock(self, id, quantity):
         """Class to remove stock (Take quantity from already added product)"""
@@ -353,14 +353,16 @@ class ProductManagerUI:
             st.warning('No products found in the warehouse')
         else:
             product_manager = self.product_manager 
+            
             products_dict = product_manager.get_products_list_dict()
             st.table(products_dict)
 
     def delete_product_ui(self):
         product_manager = self.product_manager
-
+        inventory = product_manager.inventory 
+        
         with st.form("Delete product form"):
-            product_id = st.selectbox("Product ID: ", product_manager.get_products_ids())
+            product_id = st.selectbox("Product ID: ", inventory.get_products_ids())
 
             delete_product_button = st.form_submit_button("Delete product")
 
@@ -382,8 +384,10 @@ class ProductManagerUI:
                     rerun_success()
                     
     def update_price_ui(self):
+        inventory = self.product_manager.inventory
+        
         with st.form(key='Update price'):
-            product_id = st.selectbox('Product ID: ', product_manager.get_products_ids())
+            product_id = st.selectbox('Product ID: ', inventory.get_products_ids())
             unit_price = st.number_input('Product price: ')
             
             update_price_submit = st.form_submit_button('Update price')
@@ -407,7 +411,8 @@ class StockManagerUI:
     
     def restock_product_ui(self):
         with st.form('Restock product'):
-            product_id = st.selectbox('Product ID: ', self.stock_manager.get_products_ids())
+            inventory = self.stock_manager.inventory
+            product_id = st.selectbox('Product ID: ', inventory.get_products_ids())
             
             product_quantity = st.number_input('Quantity: ')
             
@@ -427,8 +432,10 @@ class StockManagerUI:
                 rerun_success()
                                     
     def remove_stock_ui(self):
+        inventory = self.stock_manager.inventory
+        
         with st.form('Remove stock'):
-            product_id = st.selectbox("Product ID: ", self.stock_manager.get_products_ids())
+            product_id = st.selectbox("Product ID: ", inventory.get_products_ids())
             
             product_quantity = st.number_input("Product Quantity: ")
             
@@ -494,10 +501,10 @@ class InventoryUI:
             st.write(f'Total quantity in stock: {total_quantity}')
             st.write(f'Total inventory value: {total_value}')
             
-if "inventory" not in st.session_state:
-    st.session_state["inventory"] = Inventory()
+if "product_repository" not in st.session_state:
+    st.session_state["product_repository"] = ProductRepository()
 
-inventory = st.session_state["inventory"]
+inventory = st.session_state["product_repository"]
 product_manager = ProductManager(inventory)
 stock_manager = StockManager(inventory)
 
