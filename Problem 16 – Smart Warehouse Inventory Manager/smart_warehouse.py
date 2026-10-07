@@ -345,30 +345,29 @@ class StockManager:
 class InventoryStatistics:
     """class to get some statistics about products"""
 
-    @staticmethod
-    def get_count_products(product_repository: ProductRepository) -> int:
+    def __init__(self, product_repository: ProductRepository):
+        self.product_repository = product_repository 
+        
+    def get_count_products(self) -> int:
         """Function to get count products"""
+        return len(self.product_repository.get_all_products())
 
-        return len(product_repository.get_all_products())
-
-    @staticmethod
-    def get_total_quantity(product_repository: ProductRepository) -> int:
+    def get_total_quantity(self) -> int:
         """Get total quantity of products"""
 
         total_quantity = 0 
 
-        for product in product_repository.get_all_products():
+        for product in self.product_repository.get_all_products():
             total_quantity += product.quantity 
 
         return total_quantity 
-
-    @staticmethod 
-    def get_total_value(product_repository: ProductRepository) -> int:
+ 
+    def get_total_value(self) -> int:
         """Get total products values"""
 
         total_value = 0 
 
-        for product in product_repository.get_all_products():
+        for product in self.product_repository.get_all_products():
             total_value += (product.unit_price * product.quantity)
 
         return total_value 
@@ -563,11 +562,12 @@ class StockManagerUI:
 class InventoryUI:
     """Display the main inventory UI and connect the management UIs."""
 
-    def __init__(self, product_manager_ui: ProductManagerUI, stock_manager_ui: StockManagerUI) -> None:
+    def __init__(self, product_manager_ui: ProductManagerUI, stock_manager_ui: StockManagerUI, inventory_statistics: InventoryStatistics) -> None:
         #Store the product and stock management UI references
         self.product_manager_ui = product_manager_ui 
         self.stock_manager_ui = stock_manager_ui 
-
+        self.inventory_statistics = inventory_statistics 
+        
     def display(self) -> None:
         """Display all inventory operations using separate tabs."""
 
@@ -610,18 +610,17 @@ class InventoryUI:
         with tabs[6]:
             self.stock_manager_ui.low_stock_ui()
 
-    @staticmethod
-    def display_sidebar(product_repository: ProductRepository) -> None:
+    def display_sidebar(self) -> None:
         """Display inventory statistics in the Streamlit sidebar."""
 
         #Get the current number of products
-        count_products = InventoryStatistics.get_count_products(product_repository)
+        count_products = self.inventory_statistics.get_count_products()
 
         #Get the total quantity of all products
-        total_quantity = InventoryStatistics.get_total_quantity(product_repository)
+        total_quantity = self.inventory_statistics.get_total_quantity()
 
         #Get the total value of all products
-        total_value = InventoryStatistics.get_total_value(product_repository)
+        total_value = self.inventory_statistics.get_total_value()
 
         #Display the statistics inside the Streamlit sidebar
         with st.sidebar:
@@ -649,20 +648,16 @@ product_manager_ui = ProductManagerUI(product_manager)
 #Create the stock management UI
 stock_manager_ui = StockManagerUI(stock_manager)
 
-#Create the main inventory UI using both management UIs
-inventory_ui = InventoryUI(product_manager_ui, stock_manager_ui)
+#Create inventory statistics instance
+inventory_statistics = InventoryStatistics(product_repository)
 
-#Try adding product
+#Create the main inventory UI using both management UIs
+inventory_ui = InventoryUI(product_manager_ui, 
+                           stock_manager_ui, 
+                           inventory_statistics)
 
 #Display the main inventory interface
 inventory_ui.display()
 
-#Get statistics for the sidebar and inventory information
-count_products = InventoryStatistics.get_count_products(product_repository)
-
-total_quantity = InventoryStatistics.get_total_quantity(product_repository)
-
-total_product_repository = InventoryStatistics.get_total_value(product_repository)
-
 #Display the inventory statistics in the sidebar
-InventoryUI.display_sidebar(product_repository)
+inventory_ui.display_sidebar()
