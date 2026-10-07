@@ -374,7 +374,18 @@ class InventoryStatistics:
             total_quantity += product.quantity 
 
         return total_quantity 
- 
+
+    def get_total_value_by_category(self) -> dict[str, int]:
+        category_value = {}
+        
+        for product in self.product_repository.get_all_products():
+            if product.category not in category_value:
+                category_value[product.category] = 0 
+            
+            category_value[product.category] += (product.unit_price * product.quantity)
+        
+        return category_value
+            
     def get_total_value(self) -> int:
         """Get total products values"""
 
@@ -412,7 +423,17 @@ class InventoryStatistics:
                 lowest_stock_product = product
 
         return lowest_stock_product
+    
+    def get_count_products_per_category(self) -> dict[str, int]:
+        name_count = {}
         
+        for product in self.product_repository.get_all_products():
+            if product.name not in name_count:
+                name_count[product.category] = 0
+                
+            name_count[product.category] += 1    
+        
+        return name_count
 
 class ProductManagerUI:
     """Display UI of product management"""
@@ -433,7 +454,7 @@ class ProductManagerUI:
             product_name = st.text_input('Product name: ')
             category = st.selectbox('Category: ', categories)
             unit_price = st.number_input('Unit price: ')
-            add_product = st.form_submit_button('Add Product')
+            add_product = st.form_submit_button('Add Product', type='primary')
 
             #Display status if add_product button pressed
             if add_product:
@@ -554,7 +575,7 @@ class StockManagerUI:
 
         #Create a form to get the stock threshold
         with st.form("Low stock form"):        
-            threshold = st.number_input("Threshold")
+            threshold = st.number_input(":red[Threshold]")
             submit_threshold = st.form_submit_button("Submit threshold")
 
         #Display the low stock report when the threshold is submitted
@@ -610,6 +631,8 @@ class InventoryUI:
         self.inventory_statistics = inventory_statistics 
         
         st.title(f'Warehouse name: {WAREHOUSE_NAME}', text_alignment='center')
+        st.divider()
+        
         st.set_page_config(layout="wide", page_title=f'Warehouse name: {WAREHOUSE_NAME}')
     
     def display_statistics(self):
@@ -625,7 +648,9 @@ class InventoryUI:
         total_inventory_value = inventory_statistics.get_total_value()
         hieghst_stock_pay = inventory_statistics.get_highest_stock_product()
         lowest_stock_pay = inventory_statistics.get_lowest_stock_product()
-
+        count_products_per_category = inventory_statistics.get_count_products_per_category()
+        total_price_per_category = inventory_statistics.get_total_value_by_category()
+        
         #Display statistics
         st.write(f"Total products: {count_products}")
         st.write(f"Total quantity: {total_quantity}")
@@ -636,6 +661,16 @@ class InventoryUI:
             st.write(f"Highest stock quantity: {hieghst_stock_pay.quantity}")
             st.write(f"Lowest stock product: {lowest_stock_pay.name}")
             st.write(f"Lowest stock quantity: {lowest_stock_pay.quantity}")
+        
+        st.divider()
+        
+        st.subheader('Category : count products')
+        
+        st.table(count_products_per_category)
+        
+        st.subheader('Category : total_price')
+        
+        st.table(total_price_per_category)
         
     def display(self) -> None:
         """Display all inventory operations using separate tabs."""
