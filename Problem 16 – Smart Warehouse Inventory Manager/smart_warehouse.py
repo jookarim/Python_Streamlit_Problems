@@ -115,24 +115,32 @@ class ProductRepository:
 
         return None
 
+class Activity:
+    def __init__(self, product_id: str, product_quantity: int):
+        self.product_id = product_id 
+        self.product_quantity = product_quantity
+
 class ActivityRepository:
     def __init__(self):
         self.activities = {}
-    
-    def add_activity(self, product_id: str, operation) -> None:
+        self.activities_list = []
+        
+    def add_activity(self, product_id: str, operation: int) -> None:
         """Add activity to activity repository"""
         if product_id not in self.activities:
             self.activities[product_id] = []
             
         self.activities[product_id].append(operation)
-    
-    def remove_activity(self, product_id: str, operation) -> None:
+        self.activities_list.append(Activity(product_id, operation))
+        
+    def remove_activity(self, product_id: str, operation: int) -> None:
         """Remove activity from activity repository"""
         self.activities[product_id].remove(operation)
-    
-    def get_all_activities(self) -> dict[str, list]:
+        self.activities_list.remove(Activity(product_id, operation))
+        
+    def get_all_activities(self) -> list[Activity]:
         """Get all activities to be used when displaying activities"""
-        return self.activities
+        return self.activities_list
     
 #Class that validates insertion
 class Validator:
@@ -400,11 +408,10 @@ class ActivityReportUI:
         
         activities = self.activity_repository.get_all_activities()
 
-        for product_id in activities:
-            for activity in activities[product_id]:
-                st.write(f'{product_id}')
-                activity_type = ActivityReportHelper.get_activity_type(activity)
-                st.write(f"{activity} {activity_type}")
+        for activity in activities:
+            st.write(f'{activity.product_id}')
+            activity_type = ActivityReportHelper.get_activity_type(activity.product_quantity)
+            st.write(f"{activity.product_quantity}")
                 
 class InventoryStatistics:
     """class to get some statistics about products"""
