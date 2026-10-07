@@ -372,6 +372,34 @@ class InventoryStatistics:
 
         return total_value 
 
+    def get_highest_stock_product(self) -> Product | None:
+        products = self.product_repository.get_all_products()
+
+        if len(products) == 0:
+            return None
+
+        highest_stock_product = products[0]
+
+        for product in products:
+            if product.quantity > highest_stock_product.quantity:
+                highest_stock_product = product
+
+        return highest_stock_product
+    
+    def get_lowest_stock_product(self) -> Product | None:
+        products = self.product_repository.get_all_products()
+
+        if len(products) == 0:
+            return None
+
+        lowest_stock_product = products[0]
+
+        for product in products:
+            if product.quantity < lowest_stock_product.quantity:
+                lowest_stock_product = product
+
+        return lowest_stock_product
+        
 
 class ProductManagerUI:
     """Display UI of product management"""
@@ -570,6 +598,24 @@ class InventoryUI:
         
         st.title(f'Warehouse name: {WAREHOUSE_NAME}', text_alignment='center')
         st.set_page_config(layout="wide", page_title=f'Warehouse name: {WAREHOUSE_NAME}')
+    
+    def display_statistics(self):
+        inventory_statistics = self.inventory_statistics
+        count_products = inventory_statistics.get_count_products()
+        total_quantity = inventory_statistics.get_total_quantity()
+        total_inventory_value = inventory_statistics.get_total_value()
+        hieghst_stock_pay = inventory_statistics.get_highest_stock_product()
+        lowest_stock_pay = inventory_statistics.get_lowest_stock_product()
+
+        st.write(f"Total products: {count_products}")
+        st.write(f"Total quantity: {total_quantity}")
+        st.write(f"Total inventory value: {total_inventory_value}")
+        
+        if hieghst_stock_pay is not None:
+            st.write(f"Highest stock product: {hieghst_stock_pay.name}")
+            st.write(f"Highest stock quantity: {hieghst_stock_pay.quantity}")
+            st.write(f"Lowest stock product: {lowest_stock_pay.name}")
+            st.write(f"Lowest stock quantity: {lowest_stock_pay.quantity}")
         
     def display(self) -> None:
         """Display all inventory operations using separate tabs."""
@@ -583,7 +629,8 @@ class InventoryUI:
             'Update product price',
             'Restock product',
             'Remove stock',
-            'Low stock'
+            'Low stock',
+            'Inventory statistics'
         ]
         
         tabs = st.tabs(tabs_names)
@@ -623,6 +670,10 @@ class InventoryUI:
             st.header(f'{tabs_names[6]}', text_alignment='center')
             self.stock_manager_ui.low_stock_ui()
 
+        with tabs[7]:
+            st.header(f'{tabs_names[7]}', text_alignment='center')
+            self.display_statistics()
+            
     def display_sidebar(self) -> None:
         """Display inventory statistics in the Streamlit sidebar."""
 
