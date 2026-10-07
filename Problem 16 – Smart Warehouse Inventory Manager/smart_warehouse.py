@@ -114,6 +114,25 @@ class ProductRepository:
                 return product
 
         return None
+
+class ActivityRepository:
+    def __init__(self):
+        self.activities = {}
+    
+    def add_activity(self, product_id: str, operation) -> None:
+        """Add activity to activity repository"""
+        if product_id not in self.activities:
+            self.activities[product_id] = []
+            
+        self.activities[product_id].append(operation)
+    
+    def remove_activity(self, product_id: str, operation) -> None:
+        """Remove activity from activity repository"""
+        self.activities[product_id].remove(operation)
+    
+    def get_all_activities(self) -> dict[str, list]:
+        """Get all activities to be used when displaying activities"""
+        return self.activities
     
 #Class that validates insertion
 class Validator:
@@ -176,7 +195,7 @@ class ProductManager:
         """Initialize products repository"""
          
         self.product_repository = product_repository
-
+        
     def add_product(self, id: str, name: str, category: str, unit_price: int) -> None:
         """Add product but raise exception if invalid product or already found"""
         
@@ -191,7 +210,7 @@ class ProductManager:
             raise ProductAlreadyFoundException("Product already found")
             
         product_repository.add_product(product)
-    
+        
     def get_products_list_dict(self) -> list[dict]:
         """Get products as shape of list dict to be displayed as table in ui"""
         products_list_dict = []
@@ -267,13 +286,17 @@ class ProductManager:
     
 class StockManager:
     """Class to manager stock operations"""
-    def __init__(self, product_repository: ProductRepository):
+    def __init__(self, 
+                product_repository: ProductRepository,
+                activity_repository: ActivityRepository):
+        
         """Store product repository reference 
         (Do not know how data are stored just use the repo function)
         easy to change how data are stored later"""
         
         self.product_repository = product_repository
-    
+        self.activity_repository = activity_repository
+        
     def restock_product(self, id: str, quantity: int) -> None:
         """Class to restock (add quantity to already added products) 
         Raise exception when ID is invalid or quantity is invalid
@@ -292,6 +315,8 @@ class StockManager:
             raise ProductNotFoundException("Product not found to restock")
 
         product.quantity += quantity
+        
+        self.activity_repository.add_activity(product.id, quantity)
         
     def get_products_ids(self) -> list[str]:
         return self.product_repository.get_products_ids()
@@ -325,6 +350,8 @@ class StockManager:
 
         product.quantity -= quantity
     
+        self.activity_repository.add_activity(product.id, -quantity)
+        
     def low_stock_report(self, threshold: int) -> list[dict]:
         """Get low stock products (Quantity < threshold)
         Raise exceptions when quantity is invalid"""
@@ -354,7 +381,31 @@ class StockManager:
 
         return product.quantity
 
+class ActivityReportHelper:
+    @staticmethod
+    def get_activity_type(quantity):
+        """Helper function that uses quantity to 
+        determine is it a restock or remove"""
+        
+        return 'Restock' if quantity > 0 else 'Remove'
+    
+#UI display for activities
+class ActivityReportUI:
+    def __init__(self, activity_repository: ActivityRepository):
+        self.activity_repository = activity_repository
 
+    def display(self) -> None:
+        """Get all activities then 
+        display ID of product and activity type"""
+        
+        activities = self.activity_repository.get_all_activities()
+
+        for product_id in activities:
+            for activity in activities[product_id]:
+                st.write(f'{product_id}')
+                activity_type = ActivityReportHelper.get_activity_type(activity)
+                st.write(f"{activity} {activity_type}")
+                
 class InventoryStatistics:
     """class to get some statistics about products"""
 
@@ -624,11 +675,17 @@ class StockManagerUI:
 class InventoryUI:
     """Display the main inventory UI and connect the management UIs."""
 
-    def __init__(self, product_manager_ui: ProductManagerUI, stock_manager_ui: StockManagerUI, inventory_statistics: InventoryStatistics) -> None:
+    def __init__(self, 
+                product_manager_ui: ProductManagerUI, 
+                stock_manager_ui: StockManagerUI,
+                inventory_statistics: InventoryStatistics, 
+                activity_report_ui: ActivityReportUI) -> None:
+        
         #Store the product and stock management UI references
         self.product_manager_ui = product_manager_ui 
         self.stock_manager_ui = stock_manager_ui 
         self.inventory_statistics = inventory_statistics 
+        self.activity_report_ui = activity_report_ui
         
         st.title(f'Warehouse name: {WAREHOUSE_NAME}', text_alignment='center')
         st.divider()
@@ -685,7 +742,8 @@ class InventoryUI:
             'Restock product',
             'Remove stock',
             'Low stock',
-            'Inventory statistics'
+            'Inventory statistics',
+            'Activity report'
         ]
         
         tabs = st.tabs(tabs_names)
@@ -730,6 +788,10 @@ class InventoryUI:
             st.header(f'{tabs_names[7]}', text_alignment='center')
             self.display_statistics()
             
+        with tabs[8]:
+            st.header(f'{tabs_names[8]}', text_alignment='center')
+            self.activity_report_ui.display()
+            
     def display_sidebar(self) -> None:
         """Display inventory statistics in the Streamlit sidebar."""
 
@@ -759,8 +821,15 @@ product_repository = st.session_state["product_repository"]
 #Create the product manager using the shared repository
 product_manager = ProductManager(product_repository)
 
+#Create activity repository instance
+
+if 'activity_repository' not in st.session_state:
+    st.session_state['activity_repository'] = ActivityRepository()
+
+activity_repository = st.session_state['activity_repository']
+
 #Create the stock manager using the shared repository
-stock_manager = StockManager(product_repository)
+stock_manager = StockManager(product_repository, activity_repository)
 
 #Create the product management UI
 product_manager_ui = ProductManagerUI(product_manager)
@@ -771,10 +840,14 @@ stock_manager_ui = StockManagerUI(stock_manager)
 #Create inventory statistics instance
 inventory_statistics = InventoryStatistics(product_repository)
 
+activity_report_ui = ActivityReportUI(activity_repository)
+
 #Create the main inventory UI using both management UIs
 inventory_ui = InventoryUI(product_manager_ui, 
                            stock_manager_ui, 
-                           inventory_statistics)
+                           inventory_statistics,
+                           activity_report_ui
+                           )
 
 #Display the main inventory interface
 inventory_ui.display()
