@@ -1,7 +1,11 @@
 import streamlit as st 
 import time 
 
+#Name of the warehouse
+
 WAREHOUSE_NAME = "Best warehouse"
+
+#Time to display success messages before rerun
 SUCCESS_TIMER = 0.5
 
 #Custom exception for handling invalid products
@@ -57,18 +61,23 @@ class Product:
         self.category = category
         self.quantity = quantity 
         self.unit_price = unit_price 
-        
+
+#Repository for products to make data storage and retrival saperated from buiseness logic
+
 class ProductRepository:
     def __init__(self):
         self.products = []
     
     def add_product(self, product: Product) -> None:
+        """Add product to products list"""
         self.products.append(product)
     
     def remove_product(self, product: Product) -> None:
+        """Remove product from products list"""
         self.products.remove(product)
     
     def get_products_ids(self) -> list[str]:
+        """Get all products ids"""
         products_ids = []
         
         for product in self.products:
@@ -77,6 +86,7 @@ class ProductRepository:
         return products_ids 
     
     def search_product(self, product_id: str, product_name: str, product_category: str) -> Product | None:
+        """Search for product (for now, write the 3 fields)"""
         for product in self.products:
             if (product_id == product.id
                 and product_name == product.name 
@@ -86,6 +96,7 @@ class ProductRepository:
         return None 
     
     def product_found(self, checked_product: Product) -> bool:
+        """Check if a product found"""
         for product in self.products:
             if product.id == checked_product.id:
                 return True 
@@ -93,9 +104,11 @@ class ProductRepository:
         return False   
     
     def get_all_products(self) -> list[Product]:
+        """Get all products objects"""
         return self.products
     
     def get_product_by_id(self, id: str) -> Product | None:
+        """Get product object by a specific id"""
         for product in self.products:
             if product.id == id:
                 return product
@@ -600,6 +613,12 @@ class InventoryUI:
         st.set_page_config(layout="wide", page_title=f'Warehouse name: {WAREHOUSE_NAME}')
     
     def display_statistics(self):
+        """Display inventory statistics
+        (count, total quantity, total value, highest stock pay
+        highest stock pay product, lowest stock pay,
+        lowest stock pay product)"""
+        
+        #Initialize statistics variables
         inventory_statistics = self.inventory_statistics
         count_products = inventory_statistics.get_count_products()
         total_quantity = inventory_statistics.get_total_quantity()
@@ -607,6 +626,7 @@ class InventoryUI:
         hieghst_stock_pay = inventory_statistics.get_highest_stock_product()
         lowest_stock_pay = inventory_statistics.get_lowest_stock_product()
 
+        #Display statistics
         st.write(f"Total products: {count_products}")
         st.write(f"Total quantity: {total_quantity}")
         st.write(f"Total inventory value: {total_inventory_value}")
@@ -670,6 +690,7 @@ class InventoryUI:
             st.header(f'{tabs_names[6]}', text_alignment='center')
             self.stock_manager_ui.low_stock_ui()
 
+        #Display statistics UI
         with tabs[7]:
             st.header(f'{tabs_names[7]}', text_alignment='center')
             self.display_statistics()
