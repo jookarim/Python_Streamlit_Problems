@@ -568,11 +568,15 @@ class InventoryUI:
         self.stock_manager_ui = stock_manager_ui 
         self.inventory_statistics = inventory_statistics 
         
+        st.title(f'Warehouse name: {WAREHOUSE_NAME}', text_alignment='center')
+        st.set_page_config(layout="wide", page_title=f'Warehouse name: {WAREHOUSE_NAME}')
+        
     def display(self) -> None:
         """Display all inventory operations using separate tabs."""
 
         #Create tabs for the different inventory operations
-        tabs = st.tabs([
+        
+        tabs_names = [
             'Add product',
             'Remove product',
             'View products',
@@ -580,34 +584,43 @@ class InventoryUI:
             'Restock product',
             'Remove stock',
             'Low stock'
-        ])
+        ]
+        
+        tabs = st.tabs(tabs_names)
 
         #Display the add product UI
         with tabs[0]:
+            st.header(f'{tabs_names[0]}', text_alignment='center')
             self.product_manager_ui.add_product_ui()
 
         #Display the remove product UI
         with tabs[1]:
+            st.header(f'{tabs_names[1]}', text_alignment='center')
             self.product_manager_ui.delete_product_ui()
 
         #Display the view products UI
         with tabs[2]:
+            st.header(f'{tabs_names[2]}', text_alignment='center')
             self.product_manager_ui.view_products_ui()
 
         #Display the update price UI
         with tabs[3]:
+            st.header(f'{tabs_names[3]}', text_alignment='center')
             self.product_manager_ui.update_price_ui()
 
         #Display the restock product UI
         with tabs[4]:
+            st.header(f'{tabs_names[4]}', text_alignment='center')
             self.stock_manager_ui.restock_product_ui()
 
         #Display the remove stock UI
         with tabs[5]:
+            st.header(f'{tabs_names[5]}', text_alignment='center')
             self.stock_manager_ui.remove_stock_ui()
 
         #Display the low stock UI
         with tabs[6]:
+            st.header(f'{tabs_names[6]}', text_alignment='center')
             self.stock_manager_ui.low_stock_ui()
 
     def display_sidebar(self) -> None:
