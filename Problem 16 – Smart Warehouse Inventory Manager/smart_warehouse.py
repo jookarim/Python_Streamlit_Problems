@@ -391,27 +391,52 @@ class StockManager:
 
 class ActivityReportHelper:
     @staticmethod
-    def get_activity_type(quantity):
+    def get_activity_type(quantity: int) -> None:
         """Helper function that uses quantity to 
         determine is it a restock or remove"""
         
         return 'Restock' if quantity > 0 else 'Remove'
     
-#UI display for activities
-class ActivityReportUI:
+    @staticmethod
+    def get_sign_type(quantity: int) -> str:
+        activity_type = ActivityReportHelper.get_activity_type(quantity)
+        return '+' if activity_type == 'Restock' else ''
+
+#Make activity report manager to get data as dict (type, quantity)
+
+class ActivityReportManager:
     def __init__(self, activity_repository: ActivityRepository):
         self.activity_repository = activity_repository
+    
+    def get_data_dict_shape(self):
+        dict_shape = []
+        
+        for activity in self.activity_repository.get_all_activities():
+            dict_shape.append({
+                'Product id: ' : activity.product_id,
+                'Activity type: ' : ActivityReportHelper.get_activity_type(
+                    activity.product_quantity
+                ),
+                'Quantity: ' : activity.product_quantity
+            })
+            
+            return dict_shape 
+        
+#UI display for activities
+class ActivityReportUI:
+    def __init__(self, activity_report_manager: ActivityReportManager):
+        self.activity_report_manager = activity_report_manager
 
     def display(self) -> None:
         """Get all activities then 
         display ID of product and activity type"""
         
-        activities = self.activity_repository.get_all_activities()
+        activities = self.activity_report_manager.get_data_dict_shape()
 
-        for activity in activities:
-            st.write(f'{activity.product_id}')
-            activity_type = ActivityReportHelper.get_activity_type(activity.product_quantity)
-            st.write(f"{activity.product_quantity}")
+        if not activities:
+            st.info('There are no activities done yet')
+        else:        
+            st.table(activities)
                 
 class InventoryStatistics:
     """class to get some statistics about products"""
@@ -847,7 +872,9 @@ stock_manager_ui = StockManagerUI(stock_manager)
 #Create inventory statistics instance
 inventory_statistics = InventoryStatistics(product_repository)
 
-activity_report_ui = ActivityReportUI(activity_repository)
+activity_manager = ActivityReportManager(activity_repository)
+
+activity_report_ui = ActivityReportUI(activity_manager)
 
 #Create the main inventory UI using both management UIs
 inventory_ui = InventoryUI(product_manager_ui, 
