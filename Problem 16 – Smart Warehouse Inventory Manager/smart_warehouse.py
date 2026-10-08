@@ -48,6 +48,14 @@ class InvalidPriceException(Exception):
 class InvalidQuantityException(Exception):
     pass 
 
+#Custom exception for invalid warehouse
+class InvalidWarehouseException(Exception):
+    pass 
+
+#Warehouse already found exception
+class WarehouseAlreadyFoundException(Exception):
+    pass 
+
 categories = [
     'Electronics',
     'Clothes'
@@ -66,50 +74,55 @@ class Product:
 
 class ProductRepository:
     def __init__(self):
-        self.products = []
+        self.warehouse_products = {}
     
-    def add_product(self, product: Product) -> None:
+    def add_product(self, product: Product, warehouse: str) -> None:
         """Add product to products list"""
-        self.products.append(product)
+        self.warehouse_products[warehouse].append(product)
     
-    def remove_product(self, product: Product) -> None:
+    def remove_product(self, product: Product, warehouse: str) -> None:
         """Remove product from products list"""
-        self.products.remove(product)
+        self.warehouse_products[warehouse].remove(product)
+    
+    def get_warehouses(self) -> list[str]:
+        return self.warehouse_products.keys()
     
     def get_products_ids(self) -> list[str]:
         """Get all products ids"""
         products_ids = []
         
-        for product in self.products:
-            products_ids.append(product.id)
-        
+        for warehouse in self.warehouse_products:
+            for product in self.warehouse_products[warehouse]:
+                products_ids.append(product.id)
+         
         return products_ids 
     
-    def search_product(self, product_id: str, product_name: str, product_category: str) -> Product | None:
+    def search_product(self, product_id: str, product_name: str, product_category: str, warehouse: str) -> Product | None:
         """Search for product (for now, write the 3 fields)"""
-        for product in self.products:
+        
+        for product in self.warehouse_products[warehouse]:
             if (product_id == product.id
                 and product_name == product.name 
                 and product_category == product.category):
-                    return product 
+                    return product  
                         
         return None 
     
-    def product_found(self, checked_product: Product) -> bool:
+    def product_found(self, checked_product: Product, warehouse: str) -> bool:
         """Check if a product found"""
-        for product in self.products:
+        for product in self.warehouse_products[warehouse]:
             if product.id == checked_product.id:
                 return True 
         
-        return False   
+        return False      
     
-    def get_all_products(self) -> list[Product]:
+    def get_all_products(self) -> list[dict[str, list[Product]]]:
         """Get all products objects"""
-        return self.products
+        return self.warehouse_products
     
-    def get_product_by_id(self, id: str) -> Product | None:
+    def get_product_by_id(self, id: str, warehouse: str) -> Product | None:
         """Get product object by a specific id"""
-        for product in self.products:
+        for product in self.warehouse_products[warehouse]:
             if product.id == id:
                 return product
 
@@ -145,7 +158,7 @@ class ActivityRepository:
 #Class that validates insertion
 class Validator:
     @staticmethod
-    def valid_product(new_product: Product) -> bool:
+    def valid_product(new_product: Product, warehouse: str) -> bool:
         """Checks if the ID, name, or category are empty,
         or if the quantity is less than 0,
         or if the price is less than or equal to 0."""
@@ -154,10 +167,11 @@ class Validator:
             not new_product.name or 
             not new_product.category or 
             new_product.quantity < 0 or 
-            new_product.unit_price <= 0):
+            new_product.unit_price <= 0 or
+            not warehouse):
             
             return False 
-            
+        
         return True
 
     @staticmethod 
@@ -187,7 +201,11 @@ class Validator:
         """Check if price is valid"""
         return price > 0 
     
-
+    @staticmethod 
+    def valid_warehouse(warehouse: str) -> bool:
+        """Checks if valid warehouse"""
+        return warehouse != ''
+    
 def rerun_success() -> None:
     """Function to rerun code if success happend to 
     update products data display in ui"""
@@ -204,40 +222,46 @@ class ProductManager:
          
         self.product_repository = product_repository
         
-    def add_product(self, id: str, name: str, category: str, unit_price: int) -> None:
+    def add_product(self, id: str, name: str, category: str, unit_price: int, warehouse: str) -> None:
         """Add product but raise exception if invalid product or already found"""
         
         product_repository = self.product_repository
         
         product = Product(id, name, category, 0, unit_price)
         
-        if not Validator.valid_product(product):
+        if not Validator.valid_product(product, warehouse):
             raise InvalidProductException("Product is invalid, cannot add it")
                 
-        if product_repository.product_found(product):
+        if product_repository.product_found(product, warehouse):
             raise ProductAlreadyFoundException("Product already found")
-            
-        product_repository.add_product(product)
         
+        product_repository.add_product(product, warehouse)
+        
+    def get_warehouses(self) -> list[str]:
+        return self.product_repository.get_warehouses()
+    
     def get_products_list_dict(self) -> list[dict]:
         """Get products as shape of list dict to be displayed as table in ui"""
         products_list_dict = []
         
-        for product in self.product_repository.get_all_products():
-            products_list_dict.append({
-                'ID' : product.id,
-                'Name' : product.name,
-                'Category' : product.category,
-                'Quantity' : product.quantity,
-                'Unit price' : product.unit_price
-            })    
+        for warehouse in self.product_repository.get_all_products():
+            for product in self.product_repository.get_all_products()[warehouse]:
+                
+                products_list_dict.append({
+                    'ID' : product.id,
+                    'Name' : product.name,
+                    'Category' : product.category,
+                    'Quantity' : product.quantity,
+                    'Unit price' : product.unit_price,
+                    'Warehouse' : warehouse
+                })    
 
-        return products_list_dict 
+        return products_list_dict
         
     def get_products_ids(self) -> list[str]:
         return self.product_repository.get_products_ids()
     
-    def search_product(self, id: str, name: str, category: str) -> Product | None:
+    def search_product(self, id: str, name: str, category: str, warehouse: str) -> Product | None:
         """Search for specific product using id, name, category"""
         
         product_repository = self.product_repository
@@ -249,7 +273,8 @@ class ProductManager:
         product = self.product_repository.search_product(
             id,
             name,
-            category
+            category,
+            warehouse
         )
 
         if product is None:
@@ -257,14 +282,14 @@ class ProductManager:
 
         return product
         
-    def delete_product(self, id: str) -> None:
+    def delete_product(self, id: str, warehouse: str) -> None:
         """Function to delete product and raise exceptions if 
         ID is invalid or product not found or quantity is 0"""
         
         if not Validator.valid_id(id):
             raise InvalidIDException("ID is invalid for deletion")
 
-        product = self.product_repository.get_product_by_id(id)
+        product = self.product_repository.get_product_by_id(id, warehouse)
 
         if product is None:
             raise ProductNotFoundException("ID not found to delete product with")
@@ -274,7 +299,7 @@ class ProductManager:
 
         self.product_repository.remove_product(product)
     
-    def update_price(self, id: str, new_unit_price: int) -> None:
+    def update_price(self, id: str, new_unit_price: int, warehouse: str) -> None:
         """Function to update price of a specific product and 
         raise exceptions if 
         ID is invalid or new price is invalid or Product not found"""
@@ -285,7 +310,7 @@ class ProductManager:
         if not Validator.valid_price(new_unit_price):
             raise InvalidPriceException("Invalid price to update with")
         
-        product = self.product_repository.get_product_by_id(id)
+        product = self.product_repository.get_product_by_id(id, warehouse)
         
         if product is None:
             raise ProductNotFoundException("Product not found to update its price")
@@ -304,8 +329,11 @@ class StockManager:
         
         self.product_repository = product_repository
         self.activity_repository = activity_repository
+    
+    def get_warehouses(self) -> list[str]:
+        return self.product_repository.get_warehouses()
         
-    def restock_product(self, id: str, quantity: int) -> None:
+    def restock_product(self, id: str, quantity: int, warehouse: str) -> None:
         """Class to restock (add quantity to already added products) 
         Raise exception when ID is invalid or quantity is invalid
         or product not found"""
@@ -317,7 +345,10 @@ class StockManager:
         elif not Validator.valid_quantity(quantity):
             raise InvalidQuantityException("Quantity is invalid for restock")
         
-        product = self.product_repository.get_product_by_id(id)
+        elif not Validator.valid_warehouse(warehouse):
+            raise InvalidWarehouseException("Invalid warehouse for restock")
+        
+        product = self.product_repository.get_product_by_id(id, warehouse)
 
         if product is None:
             raise ProductNotFoundException("Product not found to restock")
@@ -329,7 +360,7 @@ class StockManager:
     def get_products_ids(self) -> list[str]:
         return self.product_repository.get_products_ids()
         
-    def remove_stock(self, id: str, quantity: int) -> None:
+    def remove_stock(self, id: str, quantity: int, warehouse: str) -> None:
         """Class to remove stock 
         (Take quantity from already added product)
         Raise exceptions if ID is invalid
@@ -343,15 +374,18 @@ class StockManager:
         elif not Validator.valid_quantity(quantity):
             raise InvalidQuantityException("Quantity is invalid for remove stock")
         
+        elif not Validator.valid_warehouse(warehouse):
+            raise InvalidWarehouseException("Invalid warehouse for remove stock")
+        
         #Get product quantity
-        curr_quantity = self.get_quantity(id)
+        curr_quantity = self.get_quantity(id, warehouse)
         
         #Raise exception of quantity needed to restock > curr quantity
         if curr_quantity < quantity:
             raise HighQuantityException("Removed quantity is higher than current product quantity")
         
         #restock of all data are correct
-        product = self.product_repository.get_product_by_id(id)
+        product = self.product_repository.get_product_by_id(id, warehouse)
         
         if product is None:
             raise ProductNotFoundException("Product not found to remove stock")
@@ -369,20 +403,22 @@ class StockManager:
         
         low_stock = []
         
-        for product in self.product_repository.get_all_products():
-            if product.quantity < threshold:
-                low_stock.append({
-                    'Name: ' : product.name,
-                    'Quantity: ' : product.quantity
-                })
+        for warehouse in self.product_repository.get_all_products():
+            for product in self.product_repository.get_all_products()[warehouse]:
+                if product.quantity < threshold:
+                    low_stock.append({
+                        'Name: ' : product.name,
+                        'Quantity: ' : product.quantity,
+                        'Warehouse' : warehouse
+                    })
         
         return low_stock 
     
-    def get_quantity(self, id: str) -> int:
+    def get_quantity(self, id: str, warehouse: str) -> int:
         """Get quantity of a specific product using id
         Raise exception when product is not found"""
         
-        product = self.product_repository.get_product_by_id(id)
+        product = self.product_repository.get_product_by_id(id, warehouse)
 
         if product is None:
             raise ProductNotFoundException("Product not found to get its quantity")
@@ -399,16 +435,20 @@ class ActivityReportHelper:
     
     @staticmethod
     def get_sign_type(quantity: int) -> str:
+        """Get sign that is displayed b"""
         activity_type = ActivityReportHelper.get_activity_type(quantity)
-        return '+' if activity_type == 'Restock' else ''
+        return '+' if activity_type == 'Restock' else '-'
 
-#Make activity report manager to get data as dict (type, quantity)
+#Make activity report manager to get data as dict
+#(type, quantity, product id)
 
 class ActivityReportManager:
     def __init__(self, activity_repository: ActivityRepository):
         self.activity_repository = activity_repository
     
     def get_data_dict_shape(self):
+        """Get table in list dict shape to be displayed as table"""
+        
         dict_shape = []
         
         for activity in self.activity_repository.get_all_activities():
@@ -417,10 +457,11 @@ class ActivityReportManager:
                 'Activity type: ' : ActivityReportHelper.get_activity_type(
                     activity.product_quantity
                 ),
-                'Quantity: ' : activity.product_quantity
+                'Quantity: ' : f"{ActivityReportHelper.get_sign_type(activity.product_quantity)}"
+                               f"{abs(activity.product_quantity)}"
             })
             
-            return dict_shape 
+        return dict_shape 
         
 #UI display for activities
 class ActivityReportUI:
@@ -445,79 +486,82 @@ class InventoryStatistics:
         self.product_repository = product_repository 
         
     def get_count_products(self) -> int:
-        """Function to get count products"""
-        return len(self.product_repository.get_all_products())
-
+        count_products = 0
+        
+        for warehouse in self.product_repository.get_all_products():
+            count_products += len(self.product_repository.get_all_products()[warehouse])
+        
+        return count_products
+    
     def get_total_quantity(self) -> int:
-        """Get total quantity of products"""
 
         total_quantity = 0 
 
-        for product in self.product_repository.get_all_products():
-            total_quantity += product.quantity 
+        for warehouse in self.product_repository.get_all_products():
+            for product in self.product_repository.get_all_products()[warehouse]:
+                total_quantity += product.quantity 
 
         return total_quantity 
 
     def get_total_value_by_category(self) -> dict[str, int]:
         category_value = {}
         
-        for product in self.product_repository.get_all_products():
-            if product.category not in category_value:
-                category_value[product.category] = 0 
-            
-            category_value[product.category] += (product.unit_price * product.quantity)
+        for warehouse in self.product_repository.get_all_products():
+            for product in self.product_repository.get_all_products()[warehouse]:
+                if product.category not in category_value:
+                    category_value[product.category] = 0 
+                
+                category_value[product.category] += (product.unit_price * product.quantity)
         
         return category_value
             
     def get_total_value(self) -> int:
-        """Get total products values"""
-
         total_value = 0 
 
-        for product in self.product_repository.get_all_products():
-            total_value += (product.unit_price * product.quantity)
+        for warehouse in self.product_repository.get_all_products():
+            for product in self.product_repository.get_all_products()[warehouse]:
+                total_value += (product.unit_price * product.quantity)
 
         return total_value 
 
     def get_highest_stock_product(self) -> Product | None:
         products = self.product_repository.get_all_products()
 
-        if len(products) == 0:
-            return None
+        highest_stock_product = None
 
-        highest_stock_product = products[0]
-
-        for product in products:
-            if product.quantity > highest_stock_product.quantity:
-                highest_stock_product = product
+        for warehouse in products:
+            for product in products[warehouse]:
+                if (highest_stock_product is None or
+                    product.quantity > highest_stock_product.quantity):
+                    highest_stock_product = product
 
         return highest_stock_product
     
     def get_lowest_stock_product(self) -> Product | None:
         products = self.product_repository.get_all_products()
 
-        if len(products) == 0:
-            return None
+        lowest_stock_product = None
 
-        lowest_stock_product = products[0]
-
-        for product in products:
-            if product.quantity < lowest_stock_product.quantity:
-                lowest_stock_product = product
+        for warehouse in products:
+            for product in products[warehouse]:
+                if (lowest_stock_product is None or
+                    product.quantity < lowest_stock_product.quantity):
+                    lowest_stock_product = product
 
         return lowest_stock_product
     
     def get_count_products_per_category(self) -> dict[str, int]:
         name_count = {}
         
-        for product in self.product_repository.get_all_products():
-            if product.name not in name_count:
-                name_count[product.category] = 0
-                
-            name_count[product.category] += 1    
+        for warehouse in self.product_repository.get_all_products():
+            for product in self.product_repository.get_all_products()[warehouse]:
+                if product.category not in name_count:
+                    name_count[product.category] = 0
+                    
+                name_count[product.category] += 1    
         
         return name_count
-
+        
 class ProductManagerUI:
     """Display UI of product management"""
 
@@ -537,6 +581,8 @@ class ProductManagerUI:
             product_name = st.text_input('Product name: ')
             category = st.selectbox('Category: ', categories)
             unit_price = st.number_input('Unit price: ')
+            warehouse = st.selectbox("Warehouse: ", self.product_manager.get_warehouses())
+            
             add_product = st.form_submit_button('Add Product', type='primary')
 
             #Display status if add_product button pressed
@@ -546,7 +592,8 @@ class ProductManagerUI:
                         id=product_id.strip(),
                         name=product_name.strip(),
                         category=category,
-                        unit_price=unit_price
+                        unit_price=unit_price,
+                        warehouse=warehouse
                     )
 
                 except InvalidProductException as e:
@@ -557,8 +604,8 @@ class ProductManagerUI:
                     st.success('Product is added successfully')        
                     rerun_success()
 
-    #View products as table
     def view_products_ui(self) -> None:
+        """View products as table"""
         if len(self.product_manager.get_products_list_dict()) == 0:
             st.warning('No products found in the warehouse')
         else:
@@ -568,12 +615,15 @@ class ProductManagerUI:
             st.table(products_dict)
 
     
-    def _confirm_delete(self, product_id):
+    def _confirm_delete(self, product_id: str, warehouse: str) -> None:
+        """Confirm delete using st.dialog decorator"""
+        
         @st.dialog(f"Are you sure you want to delete product {product_id}?")
         def confirm_delete_logic():
+            """Function to operate the UI logic"""
             if st.button("Confirm delete"):
                 try:
-                    self.product_manager.delete_product(product_id)
+                    self.product_manager.delete_product(product_id, warehouse)
 
                 except ProductNotFoundException as e:
                     st.error(str(e))
@@ -589,17 +639,21 @@ class ProductManagerUI:
                     rerun_success()
                     st.rerun()
 
+        #Call the logic function
         confirm_delete_logic()
     
-    def _confirm_update_price(self, product_id, unit_price):
+    def _confirm_update_price(self, product_id: str, unit_price: str, warehouse: str) -> None:
+        """Confirm update unit price using st.dialog decorator"""
+        
         @st.dialog(f'Are you sure you want to update the unit price of {product_id}')
         
         def confirm_update_logic():
+            """Function to update UI logic"""
             confirm_update_button = st.button('Confirm update')
             
             if confirm_update_button:
                 try:
-                    self.product_manager.update_price(product_id, unit_price)
+                    self.product_manager.update_price(product_id, unit_price, warehouse)
                 except ProductNotFoundException as e:
                     st.error(str(e))
                 except InvalidIDException as e:
@@ -609,7 +663,8 @@ class ProductManagerUI:
                 else:
                     st.success('Product price is updated successfully')
                     rerun_success()
-                    
+        
+        #Call the logic function
         confirm_update_logic()
             
     def delete_product_ui(self) -> None:
@@ -619,11 +674,12 @@ class ProductManagerUI:
 
         with st.form("Delete product form"):
             product_id = st.selectbox("Product ID: ", product_manager.get_products_ids())
-
+            
+            warehouse = st.selectbox("Warehouse: " ,self.product_manager.get_warehouses())
             delete_product_button = st.form_submit_button("Delete product")
 
             if delete_product_button:
-                self._confirm_delete(product_id)
+                self._confirm_delete(product_id, warehouse)
 
 
     def update_price_ui(self) -> None:
@@ -633,14 +689,55 @@ class ProductManagerUI:
         with st.form(key='Update price'):
             product_id = st.selectbox('Product ID: ', self.product_manager.get_products_ids())
             unit_price = st.number_input('Product price: ')
-
+            warehouse = st.selectbox("Warehouse: " ,self.product_manager.get_warehouses())
+            
             update_price_submit = st.form_submit_button('Update price')
 
         #Display status if update_price button pressed
 
         if update_price_submit:
-            self._confirm_update_price(product_id, unit_price)
+            self._confirm_update_price(product_id, unit_price, warehouse)
 
+#Warehouse adding backend 
+class WarehouseManager:
+    def __init__(self, product_repository: ProductRepository):
+        self.product_repository = product_repository 
+    
+    def add_warehouse(self, warehouse: str):
+        """Add warehouse function (adds warehouse and raise exception
+        if warehouse if already found or invalid)"""
+        
+        if not Validator.valid_warehouse(warehouse):
+            raise InvalidWarehouseException("Warehouse is invalid")
+        
+        if warehouse not in self.product_repository.warehouse_products.keys():
+            self.product_repository.warehouse_products[warehouse] = []
+        else:
+            raise WarehouseAlreadyFoundException("Warehouse already found")
+        
+#Class to display warehouse adding
+class WarehouseManagerUI:
+    def __init__(self, warehouse_manager: WarehouseManager):
+        self.warehouse_manager = warehouse_manager 
+    
+    def display(self):
+        """Display the warehouse adding UI"""
+        
+        warehouse = st.text_input('Warehouse: ')
+        add_warehouse_button = st.button('Add warehouse')
+       
+        #Add warehouse if exceptions did not occure 
+        if add_warehouse_button:
+            try:
+                self.warehouse_manager.add_warehouse(warehouse)
+            except InvalidWarehouseException as e:
+                st.error(str(e))
+            except WarehouseAlreadyFoundException as e:
+                st.warning(str(e))
+            else:
+                st.success('Warehouse added successfully')
+                rerun_success()
+                  
 class StockManagerUI:
     """Display UI of stock management"""
 
@@ -655,7 +752,8 @@ class StockManagerUI:
         #Create a form to get the product ID and quantity to restock
         with st.form('Restock product'):
             product_id = st.selectbox('Product ID: ', self.stock_manager.get_products_ids())
-
+            warehouse = st.selectbox("Warehouse: " ,self.stock_manager.get_warehouses())
+            
             product_quantity = st.number_input('Quantity: ')
 
             restock_product_button = st.form_submit_button('Restock product')
@@ -663,7 +761,7 @@ class StockManagerUI:
         #Display status when the restock button is pressed
         if restock_product_button:  
             try:
-                self.stock_manager.restock_product(product_id, product_quantity)
+                self.stock_manager.restock_product(product_id, product_quantity, warehouse)
             except ProductNotFoundException as e:
                 st.error(str(e))
             except InvalidQuantityException as e:
@@ -705,13 +803,15 @@ class StockManagerUI:
             product_id = st.selectbox("Product ID: ", self.stock_manager.get_products_ids())
 
             product_quantity = st.number_input("Product Quantity: ")
-
+            
+            warehouse = st.selectbox("Warehouse: " ,self.stock_manager.get_warehouses())
+            
             remove_stock = st.form_submit_button("Remove stock")
 
             #Display status when the remove stock button is pressed
             if remove_stock:
                 try:
-                    self.stock_manager.remove_stock(product_id, product_quantity)
+                    self.stock_manager.remove_stock(product_id, product_quantity, warehouse)
                 except ProductNotFoundException as e:
                     st.error(str(e))
                 except InvalidQuantityException as e:
@@ -732,13 +832,15 @@ class InventoryUI:
                 product_manager_ui: ProductManagerUI, 
                 stock_manager_ui: StockManagerUI,
                 inventory_statistics: InventoryStatistics, 
-                activity_report_ui: ActivityReportUI) -> None:
+                activity_report_ui: ActivityReportUI,
+                warehouse_manager_ui: WarehouseManagerUI) -> None:
         
         #Store the product and stock management UI references
         self.product_manager_ui = product_manager_ui 
         self.stock_manager_ui = stock_manager_ui 
         self.inventory_statistics = inventory_statistics 
         self.activity_report_ui = activity_report_ui
+        self.warehouse_manager_ui = warehouse_manager_ui 
         
         st.title(f'Warehouse name: {WAREHOUSE_NAME}', text_alignment='center')
         st.divider()
@@ -762,6 +864,8 @@ class InventoryUI:
         total_price_per_category = inventory_statistics.get_total_value_by_category()
         
         #Display statistics
+       
+        
         st.write(f"Total products: {count_products}")
         st.write(f"Total quantity: {total_quantity}")
         st.write(f"Total inventory value: {total_inventory_value}")
@@ -796,7 +900,8 @@ class InventoryUI:
             'Remove stock',
             'Low stock',
             'Inventory statistics',
-            'Activity report'
+            'Activity report',
+            'Add warehouse'
         ]
         
         tabs = st.tabs(tabs_names)
@@ -840,10 +945,16 @@ class InventoryUI:
         with tabs[7]:
             st.header(f'{tabs_names[7]}', text_alignment='center')
             self.display_statistics()
-            
+
+        #Display activity report
         with tabs[8]:
             st.header(f'{tabs_names[8]}', text_alignment='center')
             self.activity_report_ui.display()
+        
+        #Display warehouse manager ui
+        with tabs[9]:
+            st.header(f"{tabs_names[9]}", text_alignment='center')
+            self.warehouse_manager_ui.display()
             
     def display_sidebar(self) -> None:
         """Display inventory statistics in the Streamlit sidebar."""
@@ -893,15 +1004,24 @@ stock_manager_ui = StockManagerUI(stock_manager)
 #Create inventory statistics instance
 inventory_statistics = InventoryStatistics(product_repository)
 
+#Activity report manager for maanaging restock and remove stock
 activity_manager = ActivityReportManager(activity_repository)
 
+#Display activity report
 activity_report_ui = ActivityReportUI(activity_manager)
+
+#Class used to enable adding warehouses
+warehouse_manager = WarehouseManager(product_repository)
+
+#UI for adding warehouses
+warehouse_manager_ui = WarehouseManagerUI(warehouse_manager)
 
 #Create the main inventory UI using both management UIs
 inventory_ui = InventoryUI(product_manager_ui, 
                            stock_manager_ui, 
                            inventory_statistics,
-                           activity_report_ui
+                           activity_report_ui,
+                           warehouse_manager_ui
                            )
 
 #Display the main inventory interface
