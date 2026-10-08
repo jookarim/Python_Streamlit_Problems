@@ -525,7 +525,7 @@ class ProductManagerUI:
         """Add product manager reference"""
 
         self.product_manager = product_manager 
-
+        
     def add_product_ui(self) -> None:
         """Function to display UI of adding product"""
 
@@ -567,19 +567,13 @@ class ProductManagerUI:
             products_dict = product_manager.get_products_list_dict()
             st.table(products_dict)
 
-    def delete_product_ui(self) -> None:
-        """Function to delete product"""
-
-        product_manager = self.product_manager
-
-        with st.form("Delete product form"):
-            product_id = st.selectbox("Product ID: ", product_manager.get_products_ids())
-
-            delete_product_button = st.form_submit_button("Delete product")
-
-            if delete_product_button:
+    
+    def _confirm_delete(self, product_id):
+        @st.dialog(f"Are you sure you want to delete product {product_id}?")
+        def confirm_delete_logic():
+            if st.button("Confirm delete"):
                 try:
-                    product_manager.delete_product(product_id)
+                    self.product_manager.delete_product(product_id)
 
                 except ProductNotFoundException as e:
                     st.error(str(e))
@@ -593,6 +587,44 @@ class ProductManagerUI:
                 else:
                     st.success("Product is deleted successfully")
                     rerun_success()
+                    st.rerun()
+
+        confirm_delete_logic()
+    
+    def _confirm_update_price(self, product_id, unit_price):
+        @st.dialog(f'Are you sure you want to update the unit price of {product_id}')
+        
+        def confirm_update_logic():
+            confirm_update_button = st.button('Confirm update')
+            
+            if confirm_update_button:
+                try:
+                    self.product_manager.update_price(product_id, unit_price)
+                except ProductNotFoundException as e:
+                    st.error(str(e))
+                except InvalidIDException as e:
+                    st.error(str(e))
+                except InvalidPriceException as e:
+                    st.error(str(e))
+                else:
+                    st.success('Product price is updated successfully')
+                    rerun_success()
+                    
+        confirm_update_logic()
+            
+    def delete_product_ui(self) -> None:
+        """Function to delete product"""
+
+        product_manager = self.product_manager
+
+        with st.form("Delete product form"):
+            product_id = st.selectbox("Product ID: ", product_manager.get_products_ids())
+
+            delete_product_button = st.form_submit_button("Delete product")
+
+            if delete_product_button:
+                self._confirm_delete(product_id)
+
 
     def update_price_ui(self) -> None:
         """Update price of a product"""
@@ -607,18 +639,7 @@ class ProductManagerUI:
         #Display status if update_price button pressed
 
         if update_price_submit:
-            try:
-                self.product_manager.update_price(product_id, unit_price)
-            except ProductNotFoundException as e:
-                st.error(str(e))
-            except InvalidIDException as e:
-                st.error(str(e))
-            except InvalidPriceException as e:
-                st.error(str(e))
-            else:
-                st.success('Product price is updated successfully')
-                rerun_success()
-
+            self._confirm_update_price(product_id, unit_price)
 
 class StockManagerUI:
     """Display UI of stock management"""
