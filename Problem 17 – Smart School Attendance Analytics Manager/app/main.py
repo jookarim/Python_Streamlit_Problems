@@ -1,13 +1,23 @@
+from datetime import date
+
 from repositories.student_repository import StudentRepository
+from repositories.attendance_repository import AttendanceRepository 
 
 student_repository = StudentRepository(
-    r"D:\Dev\Python_Streamlit_Problems\Problem 17 – Smart School Attendance Analytics Manager\app\data\students.csv"
+    r"data\students.csv"
 )
 
 student_repository.add_student(
     '1001',
     'Hello',
     'C1'
+)
+
+attendance_repo = AttendanceRepository(r"data\attendance.csv")
+attendance_repo.record_attendance(
+    '1001',
+    date(2026, 5, 10),
+    'Present'
 )
 
 for student in student_repository.get_all_students():
