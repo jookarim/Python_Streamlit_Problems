@@ -61,7 +61,7 @@ class StudentRepository:
                 
         mask = pd.Series(True, index=self.students.index)
 
-        if student_id:
+        if student_id.strip():
             mask &= self.students['Student ID'] == student_id
 
         if student_name:

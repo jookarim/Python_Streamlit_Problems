@@ -1,3 +1,5 @@
+from models.attendance import Attendance 
+
 import pandas as pd 
 from datetime import date
 
@@ -41,4 +43,13 @@ class AttendanceRepository:
         
         self.attendance_data.to_csv(self.csv_path, index=False)
     
-        
+    def get_all_records(self):
+        return [
+            Attendance(
+                row['Student ID'],
+                row['Attendance date'],
+                row['Attendance status']
+            )
+            
+            for _, row in self.attendance_data.iterrows()
+        ]

@@ -1,0 +1,2 @@
+class NoProductsException(Exception):
+    pass 
