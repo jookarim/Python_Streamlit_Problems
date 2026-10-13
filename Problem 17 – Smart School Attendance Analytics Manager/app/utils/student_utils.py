@@ -1,4 +1,5 @@
 from models.student import Student 
+
 import pandas as pd 
 
 def generate_df_from_students(
@@ -22,4 +23,13 @@ def generate_df_from_students(
             student.student_class
         ]
     
-    return df 
+    return df
+
+def get_students_ids(
+    students_data: list[Student]
+) -> list[str]:
+    
+    return [
+        student.student_id 
+        for student in students_data
+    ]

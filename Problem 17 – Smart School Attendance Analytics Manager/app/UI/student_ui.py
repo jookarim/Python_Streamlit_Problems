@@ -1,7 +1,7 @@
 import streamlit as st 
 from services.student_service import StudentService 
 from exceptions import student_exceptions 
-from utils import utils
+from utils import student_utils
 
 class StudentUI:
     def __init__(
@@ -36,7 +36,8 @@ class StudentUI:
                 st.success('Student registered successfully')
     
     def display_delete_student(self):
-        student_id = st.text_input('Student ID: ')
+        student_id = st.selectbox('Student ID: ', 
+                                student_utils.get_students_ids(self.student_service.get_all_students()))
         delete_student_button = st.button('Delete student')
         
         if delete_student_button:
@@ -54,7 +55,8 @@ class StudentUI:
                 
     def display_search_student(self):
         with st.form(key="Search student"):
-            student_id = st.text_input("Student ID: ")
+            student_id = st.selectbox("Student ID: ",
+                                    student_utils.get_students_ids(self.student_service.get_all_students()))
             student_name = st.text_input("Student Name: ")
             student_class = st.text_input("Class: ")
             search_student = st.form_submit_button("Search student")
@@ -73,7 +75,7 @@ class StudentUI:
                 st.warning('No result for these search data')
             
             else:
-                st.dataframe(utils.generate_df_from_students(
+                st.dataframe(student_utils.generate_df_from_students(
                     search_result   
                 ))
                 
@@ -81,26 +83,6 @@ class StudentUI:
     
     def view_students(self):
         students_data = self.student_service.get_all_students()
-        st.dataframe(utils.generate_df_from_students(
+        st.dataframe(student_utils.generate_df_from_students(
             students_data     
         ), hide_index=True)
-        
-    def display(self):
-        tab1,tab2,tab3,tab4 = st.tabs([
-            'Register student',
-            'Remove student',
-            'Search student',
-            'View students'
-        ])
-        
-        with tab1:
-            self.display_register_student()
-            
-        with tab2:
-            self.display_delete_student()
-            
-        with tab3:
-            self.display_search_student()
-        
-        with tab4:
-            self.view_students()
