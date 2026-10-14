@@ -11,6 +11,7 @@ class StudentRepository:
             csv_path,
             dtype=str
         )
+        
     
     def add_student(
         self,

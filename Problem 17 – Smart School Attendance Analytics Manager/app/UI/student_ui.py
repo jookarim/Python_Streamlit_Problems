@@ -9,8 +9,6 @@ class StudentUI:
         student_service: StudentService
     ):
         self.student_service = student_service
-         
-        
         
     def display_register_student(self):
         with st.form(key="Register student"): 
@@ -34,24 +32,6 @@ class StudentUI:
             
             else:
                 st.success('Student registered successfully')
-    
-    def display_delete_student(self):
-        student_id = st.selectbox('Student ID: ', 
-                                student_utils.get_students_ids(self.student_service.get_all_students()))
-        delete_student_button = st.button('Delete student')
-        
-        if delete_student_button:
-            try:
-                self.student_service.remove_student(student_id)
-            
-            except student_exceptions.InvalidStudentIDException as e:
-                st.error(e)
-                
-            except student_exceptions.StudentNotFoundException as e:
-                st.warning(str(e))
-
-            else:
-                st.success('Student deleted successfully')
                 
     def display_search_student(self):
         with st.form(key="Search student"):
@@ -77,12 +57,16 @@ class StudentUI:
             else:
                 st.dataframe(student_utils.generate_df_from_students(
                     search_result   
-                ))
+                ), hide_index=True)
                 
                 st.success('Search result appeared successfully')
     
     def view_students(self):
         students_data = self.student_service.get_all_students()
-        st.dataframe(student_utils.generate_df_from_students(
-            students_data     
-        ), hide_index=True)
+        
+        if len(students_data):
+            st.dataframe(student_utils.generate_df_from_students(
+                students_data     
+            ), hide_index=True)
+        else:
+            st.warning('There are no students yet')

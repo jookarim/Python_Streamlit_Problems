@@ -36,26 +36,6 @@ class StudentService:
             student_class     
         )
     
-    def remove_student(
-        self,
-        student_id: str
-    ) -> None:
-        StudentValidation.validate_id(
-            student_id
-        )
-        
-        found_id = self.student_repository.check_id_found(
-            student_id
-        )
-        
-        StudentValidation.validate_not_found_id(
-            found_id   
-        )
-        
-        self.student_repository.delete_student(
-            student_id
-        )
-    
     def search_student(
         self,
         student_id: str, 

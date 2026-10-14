@@ -1,6 +1,6 @@
 from UI.attendance_ui import AttendanceUI 
 from UI.student_ui import StudentUI 
-
+from UI.school_ui import SchoolUI
 
 import streamlit as st
 
@@ -10,10 +10,13 @@ class AppUI:
     def __init__(
         self,
         attendance_ui: AttendanceUI,
-        student_ui: StudentUI
+        student_ui: StudentUI,
+        school_ui: SchoolUI
     ):
         self.attendance_ui = attendance_ui 
-        self.student_ui = student_ui 
+        self.student_ui = student_ui
+        self.school_ui = school_ui 
+         
         st.title('Smart school attendance analytics manager', text_alignment='center')
         
     def display(self):
@@ -31,7 +34,7 @@ class AppUI:
             self.student_ui.display_register_student()
         
         with tab2:
-            self.student_ui.display_delete_student()
+            self.school_ui.display_delete_student()
             
         with tab3:
             self.student_ui.display_search_student()

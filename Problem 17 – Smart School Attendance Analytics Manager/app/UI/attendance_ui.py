@@ -70,6 +70,11 @@ class AttendanceUI:
                 
     def view_attendances(self):
         attendances_records = self.attendance_service.get_all_attendance_records()
-        st.dataframe(attendance_utils.generate_df_from_attendance(
-            attendances_records
-        ), hide_index=True)
+        
+        if len(attendances_records):
+            st.dataframe(attendance_utils.generate_df_from_attendance(
+                attendances_records
+            ), hide_index=True)
+        
+        else:
+            st.warning('No attendance records yet')
