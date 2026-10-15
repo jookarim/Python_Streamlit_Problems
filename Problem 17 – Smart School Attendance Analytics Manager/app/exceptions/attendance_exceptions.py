@@ -9,3 +9,6 @@ class StudentIsNotFoundException(Exception):
 
 class AttendanceNotRecordedException(Exception):
     pass 
+
+class NoAttendanceRecordsException(Exception):
+    pass 

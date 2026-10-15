@@ -4,11 +4,13 @@ from repositories.attendance_repository import AttendanceRepository
 from services.student_service import StudentService 
 from services.attendance_service import AttendanceService 
 from services.school_service import SchoolService 
+from services.attendance_explorer_service import AttendanceExplorer 
 
 from UI.student_ui import StudentUI 
 from UI.attendance_ui import AttendanceUI 
 from UI.app_ui import AppUI 
 from UI.school_ui import SchoolUI 
+from UI.attendance_explorer_ui import AttendanceExplorerUI 
 
 student_repository = StudentRepository(
     'app/data/students.csv'
@@ -44,10 +46,19 @@ school_ui = SchoolUI(
     student_service 
 )
 
+attendance_explorer_service = AttendanceExplorer(
+    attendance_repository
+)
+
+attendance_explorer_ui = AttendanceExplorerUI(
+    attendance_explorer_service
+)
+
 app_ui = AppUI(
     attendance_ui=attendance_ui,
     student_ui=student_ui,
-    school_ui=school_ui
+    school_ui=school_ui,
+    attendance_explorer_ui=attendance_explorer_ui
 )
 
 app_ui.display()

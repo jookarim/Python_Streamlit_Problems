@@ -1,6 +1,7 @@
 from UI.attendance_ui import AttendanceUI 
 from UI.student_ui import StudentUI 
 from UI.school_ui import SchoolUI
+from UI.attendance_explorer_ui import AttendanceExplorerUI 
 
 import streamlit as st
 
@@ -11,23 +12,26 @@ class AppUI:
         self,
         attendance_ui: AttendanceUI,
         student_ui: StudentUI,
-        school_ui: SchoolUI
+        school_ui: SchoolUI,
+        attendance_explorer_ui: AttendanceExplorerUI
     ):
         self.attendance_ui = attendance_ui 
         self.student_ui = student_ui
         self.school_ui = school_ui 
-         
+        self.attendance_explorer_ui = attendance_explorer_ui 
+        
         st.title('Smart school attendance analytics manager', text_alignment='center')
         
     def display(self):
-        tab1,tab2,tab3,tab4,tab5,tab6,tab7 = st.tabs([
+        tab1,tab2,tab3,tab4,tab5,tab6,tab7,tab8 = st.tabs([
             'Register student',
             'Remove student',
             'Search student',
             'View students',
             'Record attendance',
             'Correct attendance',
-            'View attendance records'
+            'View attendance records',
+            'Explore attendance records'
         ])
         
         with tab1:
@@ -58,4 +62,8 @@ class AppUI:
         
         with tab7:
             self.attendance_ui.view_attendances()
+        
+        with tab8:
+            self.attendance_explorer_ui.display_exploration_buttons()
+            
         

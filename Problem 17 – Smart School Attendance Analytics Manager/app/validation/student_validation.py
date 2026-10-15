@@ -52,3 +52,5 @@ class StudentValidation:
             raise student_exceptions.EmptySearchResultException(
                 "Search result is empty"
             )
+        
+        

@@ -1,4 +1,5 @@
 from exceptions import attendance_exceptions
+from models.attendance import Attendance 
 
 from datetime import date
 
@@ -32,4 +33,13 @@ class AttendanceValidation:
         if not already_recorded:
             raise attendance_exceptions.AttendanceNotRecordedException(
                 f"Attendance not recorded for this student: {student_id}"
+            )
+            
+    @staticmethod 
+    def validate_found_attendance_records(
+        attendance_records: list[Attendance]
+    ):
+        if not len(attendance_records):
+            raise attendance_exceptions.NoAttendanceRecordsException(
+                "There are no attendance records"
             )
