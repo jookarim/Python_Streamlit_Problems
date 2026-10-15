@@ -43,7 +43,8 @@ attendance_ui = AttendanceUI(
 
 school_ui = SchoolUI(
     school_service,
-    student_service 
+    student_service,
+    attendance_service
 )
 
 attendance_explorer_service = AttendanceExplorer(

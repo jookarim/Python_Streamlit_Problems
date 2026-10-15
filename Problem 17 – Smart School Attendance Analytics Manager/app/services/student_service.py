@@ -57,3 +57,12 @@ class StudentService:
     
     def get_all_students(self) -> list[Student]:
         return self.student_repository.get_all_students()
+    
+    def get_name_class_from_id(
+                                self,
+                                student_id: str
+                            ) -> tuple[str, str]:
+        
+        return self.student_repository.get_name_class_from_id(
+            student_id
+        )

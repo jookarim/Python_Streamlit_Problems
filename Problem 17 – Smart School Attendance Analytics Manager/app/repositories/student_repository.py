@@ -91,3 +91,17 @@ class StudentRepository:
         student_id: str
     ) -> bool:
         return (self.students_df['Student ID'] == student_id).any()
+    
+    def get_name_class_from_id(
+        self,
+        student_id: str
+    ) -> tuple[str, str]:
+        student_name = self.students_df[
+            self.students_df['Student ID'] == student_id
+        ]['Student Name'].iloc[0]
+         
+        student_class = self.students_df[
+            self.students_df['Student ID'] == student_id
+        ]['Student Class'].iloc[0]
+        
+        return (student_name, student_class)

@@ -1,8 +1,10 @@
 from services.school_service import SchoolService
 from services.student_service import StudentService 
+from services.attendance_service import AttendanceService 
 
 from exceptions import student_exceptions 
 from utils import student_utils 
+from utils import school_utils 
 
 import streamlit as st 
 
@@ -10,11 +12,13 @@ class SchoolUI:
     def __init__(
         self,
         school_service: SchoolService,
-        student_service: StudentService 
+        student_service: StudentService,
+        attendance_service: AttendanceService
     ) -> None:
         self.school_service = school_service
         self.student_service = student_service 
-        
+        self.attendance_service = attendance_service 
+                
     def display_delete_student(
         self
     ):
@@ -36,4 +40,17 @@ class SchoolUI:
             else: 
                 st.success('Student deleted successfully') 
         
-
+    def display_full_attendance_records(self):
+        attendances_df = school_utils.generate_df_from_attendance_data(
+                            self.student_service,
+                            self.attendance_service.get_all_attendance_records()
+                        )
+        
+        if not len(attendances_df):
+            st.warning('No attendance records yet')
+            
+        else:
+            st.dataframe(
+                attendances_df,
+                hide_index=True
+            )
