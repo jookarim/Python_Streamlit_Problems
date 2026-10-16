@@ -65,5 +65,17 @@ class AttendanceService:
             new_status
         )
         
+    def sort_by_date(
+        self,
+        ascending: bool
+    ) -> None:
+        AttendanceValidation.validate_found_attendance_records(
+            self.get_all_attendance_records()
+        )
+        
+        self.attendance_repository.sort_attendance_by_date(
+            ascending
+        )
+        
     def get_all_attendance_records(self) -> list[Attendance]:
         return self.attendance_repository.get_all_attendance_records()

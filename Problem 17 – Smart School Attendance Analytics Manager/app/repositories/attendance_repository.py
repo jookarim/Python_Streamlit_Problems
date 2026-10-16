@@ -96,3 +96,17 @@ class AttendanceRepository:
 
             for _, row in self.attendance_df.iterrows()
         ]
+    
+    def sort_attendance_by_date(
+        self, 
+        is_ascending: bool
+    ) -> None:
+        self.attendance_df = self.attendance_df.sort_values(
+            'Attendance Date',
+            ascending=is_ascending
+        )
+        
+        self.attendance_df.to_csv(
+            self.csv_path,
+            index=False
+        )

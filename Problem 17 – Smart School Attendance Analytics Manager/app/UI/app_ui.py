@@ -23,7 +23,7 @@ class AppUI:
         st.title('Smart school attendance analytics manager', text_alignment='center')
         
     def display(self):
-        tab1,tab2,tab3,tab4,tab5,tab6,tab7,tab8,tab9 = st.tabs([
+        tab1,tab2,tab3,tab4,tab5,tab6,tab7,tab8,tab9,tab10 = st.tabs([
             'Register student',
             'Remove student',
             'Search student',
@@ -32,7 +32,8 @@ class AppUI:
             'Correct attendance',
             'View attendance records',
             'Explore attendance records',
-            'View full attendance records'
+            'View full attendance records',
+            'Sort attendance records'
         ])
         
         with tab1:
@@ -70,3 +71,5 @@ class AppUI:
         with tab9:
             self.school_ui.display_full_attendance_records()
         
+        with tab10:
+            self.attendance_ui.display_sort_attendance()        

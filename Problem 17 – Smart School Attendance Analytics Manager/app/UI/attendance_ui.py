@@ -67,7 +67,30 @@ class AttendanceUI:
                 st.warning(str(e))
             else:
                 st.success('Attendance corrected successfully')
+               
+    def display_sort_attendance(
+        self, 
+    ) -> None:
+        oldest_to_newest = st.button('Oldest -> Newest')
+        newest_to_oldest = st.button('Newest -> Oldest')
+        
+        button_pressed = False 
+        
+        try:
+            if oldest_to_newest:
+                self.attendance_service.sort_by_date(ascending=False)
+                button_pressed = True
+            if newest_to_oldest:
+                self.attendance_service.sort_by_date(ascending=True)
+                button_pressed = True 
                 
+        except attendance_exceptions.NoAttendanceRecordsException as e:
+            if button_pressed:
+                st.warning(str(e))
+        else:
+            if button_pressed:
+                st.success("Attendance records sorted successfully")
+        
     def view_attendances(self):
         attendances_records = self.attendance_service.get_all_attendance_records()
         
