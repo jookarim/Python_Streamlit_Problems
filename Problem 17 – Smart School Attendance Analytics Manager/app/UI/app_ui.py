@@ -3,6 +3,7 @@ from UI.student_ui import StudentUI
 from UI.school_ui import SchoolUI
 from UI.attendance_explorer_ui import AttendanceExplorerUI 
 from UI.statistics_ui import StatisticsUI 
+from UI.attendance_charts import AttendanceCharts 
 
 import streamlit as st
 
@@ -15,18 +16,35 @@ class AppUI:
         student_ui: StudentUI,
         school_ui: SchoolUI,
         attendance_explorer_ui: AttendanceExplorerUI,
-        statistics_ui: StatisticsUI
+        statistics_ui: StatisticsUI,
+        attendance_charts: AttendanceCharts
     ):
         self.attendance_ui = attendance_ui 
         self.student_ui = student_ui
         self.school_ui = school_ui 
         self.attendance_explorer_ui = attendance_explorer_ui 
         self.statistics_ui = statistics_ui 
-        
+        self.attendance_charts = attendance_charts
+          
         st.title('Smart school attendance analytics manager', text_alignment='center')
         
-    def display(self):
-        tab1,tab2,tab3,tab4,tab5,tab6,tab7,tab8,tab9,tab10,tab11 = st.tabs([
+    def display(
+        self,
+        students_ids: list[str]
+    ):
+        (tab1,
+        tab2,
+        tab3,
+        tab4,
+        tab5,
+        tab6,
+        tab7,
+        tab8,
+        tab9,
+        tab10,
+        tab11,
+        tab12,
+        tab13) = st.tabs([
             'Register student',
             'Remove student',
             'Search student',
@@ -37,7 +55,9 @@ class AppUI:
             'Explore attendance records',
             'View full attendance records',
             'Sort attendance records',
-            'Statistics'
+            'Statistics',
+            'Charts',
+            'Present vs absent'
         ])
         
         with tab1:
@@ -80,3 +100,11 @@ class AppUI:
         
         with tab11:
             self.statistics_ui.display()
+            
+        with tab12:
+            self.attendance_charts.display_present_vs_absent()
+        
+        with tab13:
+            self.attendance_charts.display_present_vs_absent_percent(
+                students_ids
+            )

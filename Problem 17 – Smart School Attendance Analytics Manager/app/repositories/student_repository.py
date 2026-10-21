@@ -105,3 +105,6 @@ class StudentRepository:
         ]['Student Class'].iloc[0]
         
         return (student_name, student_class)
+
+    def get_all_students_ids(self) -> pd.Series:
+        return self.students_df['Student ID']

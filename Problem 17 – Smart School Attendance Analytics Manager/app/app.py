@@ -13,6 +13,7 @@ from UI.app_ui import AppUI
 from UI.school_ui import SchoolUI 
 from UI.attendance_explorer_ui import AttendanceExplorerUI 
 from UI.statistics_ui import StatisticsUI 
+from UI.attendance_charts import AttendanceCharts 
 
 student_repository = StudentRepository(
     'app/data/students.csv'
@@ -62,7 +63,12 @@ statistics_service = StatisticsService(
 )
 
 statistics_ui = StatisticsUI(
-    statistics_service 
+    statistics_service,
+    student_service 
+)
+
+attendance_charts = AttendanceCharts(
+    statistics_service
 )
 
 app_ui = AppUI(
@@ -70,7 +76,10 @@ app_ui = AppUI(
     student_ui=student_ui,
     school_ui=school_ui,
     attendance_explorer_ui=attendance_explorer_ui,
-    statistics_ui=statistics_ui
+    statistics_ui=statistics_ui,
+    attendance_charts=attendance_charts
 )
 
-app_ui.display()
+app_ui.display(
+    student_service.get_all_students_ids()
+)

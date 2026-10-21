@@ -66,3 +66,7 @@ class StudentService:
         return self.student_repository.get_name_class_from_id(
             student_id
         )
+    
+    def get_all_students_ids(self) -> list[str]:
+        return list(self.student_repository.get_all_students_ids())
+    
